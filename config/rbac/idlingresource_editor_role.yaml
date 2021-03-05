@@ -1,0 +1,24 @@
+# permissions for end users to edit idlingresources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: idlingresource-editor-role
+rules:
+- apiGroups:
+  - kidle.beroot.org
+  resources:
+  - idlingresources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kidle.beroot.org
+  resources:
+  - idlingresources/status
+  verbs:
+  - get

@@ -1,0 +1,20 @@
+# permissions for end users to view idlingresources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: idlingresource-viewer-role
+rules:
+- apiGroups:
+  - kidle.beroot.org
+  resources:
+  - idlingresources
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kidle.beroot.org
+  resources:
+  - idlingresources/status
+  verbs:
+  - get

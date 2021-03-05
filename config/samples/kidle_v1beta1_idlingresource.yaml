@@ -1,0 +1,7 @@
+apiVersion: kidle.beroot.org/v1beta1
+kind: IdlingResource
+metadata:
+  name: idlingresource-sample
+spec:
+  # Add fields here
+  foo: bar

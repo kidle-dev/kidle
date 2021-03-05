@@ -1,3 +1,7 @@
-domain: kidle.beroot.org
+domain: beroot.org
 repo: github.com/orphaner/kidle
+resources:
+- group: kidle
+  kind: IdlingResource
+  version: v1beta1
 version: "2"
