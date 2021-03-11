@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 // IdlingResourceSpec defines the desired state of IdlingResource
@@ -67,7 +66,6 @@ type CronStrategy struct {
 }
 
 type InactiveStrategy struct {
-
 }
 
 type WakeupStrategy struct {
@@ -79,7 +77,6 @@ type WakeupStrategy struct {
 }
 
 type OnCallStrategy struct {
-
 }
 
 // IdlingResourceStatus defines the observed state of IdlingResource
@@ -88,6 +85,7 @@ type IdlingResourceStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
+// +kubebuilder:resource:shortName=ir
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
