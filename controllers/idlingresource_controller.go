@@ -18,6 +18,9 @@ package controllers
 
 import (
 	"context"
+	"github.com/prometheus/common/log"
+	v1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,10 +41,37 @@ type IdlingResourceReconciler struct {
 // +kubebuilder:rbac:groups=kidle.beroot.org,resources=idlingresources/status,verbs=get;update;patch
 
 func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+	ctx := context.Background()
 	_ = r.Log.WithValues("idlingresource", req.NamespacedName)
 
 	// your logic here
+	var ir kidlev1beta1.IdlingResource
+	if err := r.Get(ctx, req.NamespacedName, &ir); err != nil {
+		log.Error("unable to read IdlingResource")
+		return ctrl.Result{}, err
+	}
+
+	ref := ir.Spec.IdlingResourceRef
+	switch ref.Kind {
+	case "Deployment":
+		var deploy v1.Deployment
+		nn := types.NamespacedName{
+			Namespace: req.Namespace,
+			Name:      ref.Name,
+		}
+		if err := r.Get(ctx, nn, &deploy); err != nil {
+			log.Error("unable to read Deployment")
+			return ctrl.Result{}, err
+		}
+		if *ir.Spec.Idle && *deploy.Spec.Replicas > 0 {
+			zero := int32(0)
+			deploy.Spec.Replicas = &zero
+			if err := r.Client.Update(ctx, &deploy); err != nil {
+				log.Error("unable to downscale deployment")
+				return ctrl.Result{}, err
+			}
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -50,4 +80,7 @@ func (r *IdlingResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kidlev1beta1.IdlingResource{}).
 		Complete(r)
+}
+
+type Idler struct {
 }
