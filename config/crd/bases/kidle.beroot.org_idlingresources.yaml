@@ -13,6 +13,8 @@ spec:
     kind: IdlingResource
     listKind: IdlingResourceList
     plural: idlingresources
+    shortNames:
+    - ir
     singular: idlingresource
   scope: Namespaced
   subresources:
