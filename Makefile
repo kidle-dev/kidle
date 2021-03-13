@@ -54,6 +54,10 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+# Build and push the docker image
+docker: docker-build docker-push
+d: docker
+
 # Build the docker image
 docker-build: test
 	docker build . -t ${IMG}
@@ -78,3 +82,29 @@ CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
+
+# Create a k3d registry
+k3d-registry:
+	k3d registry create --port 16000 kidle.localhost
+
+# Create a k3s-kidle k8s server
+k3s-create:
+	k3d cluster create kidle --registry-use k3d-kidle.localhost:16000
+
+# Delete a k3s-kidle k8s server
+k3s-delete:
+	k3d cluster delete kidle
+
+# Starts k3s server
+k3s-start:
+	k3d cluster start kidle
+
+# Stops k3s server
+k3s-stop:
+	k3d cluster stop kidle
+
+# Write kubeconfig file
+k3s-kubeconfig:
+	k3d kubeconfig get kidle > kube.config
+
+k3s-recreate: k3s-stop k3s-delete k3s-create k3s-kubeconfig
