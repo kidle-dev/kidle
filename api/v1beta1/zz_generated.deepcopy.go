@@ -117,11 +117,6 @@ func (in *IdlingResourceList) DeepCopyObject() runtime.Object {
 func (in *IdlingResourceSpec) DeepCopyInto(out *IdlingResourceSpec) {
 	*out = *in
 	out.IdlingResourceRef = in.IdlingResourceRef
-	if in.Idle != nil {
-		in, out := &in.Idle, &out.Idle
-		*out = new(bool)
-		**out = **in
-	}
 	if in.IdlingStrategy != nil {
 		in, out := &in.IdlingStrategy, &out.IdlingStrategy
 		*out = new(IdlingStrategy)
