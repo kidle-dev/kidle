@@ -87,6 +87,7 @@ spec:
                   type: object
               type: object
           required:
+          - idle
           - idlingResourceRef
           type: object
         status:

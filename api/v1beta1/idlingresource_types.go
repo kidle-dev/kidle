@@ -29,8 +29,8 @@ type IdlingResourceSpec struct {
 	IdlingResourceRef CrossVersionObjectReference `json:"idlingResourceRef"`
 
 	// The desired state of idling. Defaults to false.
-	// +optional
-	Idle *bool `json:"idle"`
+	// +kubebuilder:default:false
+	Idle bool `json:"idle"`
 
 	// +optional
 	IdlingStrategy *IdlingStrategy `json:"idlingStrategy,omitempty"`
