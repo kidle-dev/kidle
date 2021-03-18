@@ -1,0 +1,11 @@
+# Adds namespace to all resources.
+namespace: kidle-system
+
+resources:
+  - ../default
+  - persistent-volume.yaml
+  - delve-service.yaml
+
+patchesStrategicMerge:
+  # Add PVC, declare delve port and remove command
+  - manager_debug_patch.yaml
