@@ -38,6 +38,11 @@ deploy: manifests
 	cd config/manager && kustomize edit set image controller=${IMG}
 	kustomize build config/default | kubectl apply -f -
 
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+deploy-debug: manifests
+	cd config/manager && kustomize edit set image controller=${IMG_DEBUG}
+	kustomize build config/debug | kubectl apply -f -
+
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
@@ -66,6 +71,18 @@ docker-build: test
 docker-push:
 	docker push ${IMG}
 
+# Build and push the docker debug image
+docker-debug: docker-debug-build docker-debug-push
+dd: docker-debug
+
+# Build the docker debug image
+docker-debug-build:
+	docker build . -t ${IMG_DEBUG} -f Dockerfile.debug
+
+# Push the docker debug image
+docker-debug-push:
+	docker push ${IMG_DEBUG}
+
 # find or download controller-gen
 # download controller-gen if necessary
 controller-gen:
@@ -89,7 +106,7 @@ k3d-registry:
 
 # Create a k3s-kidle k8s server
 k3s-create:
-	k3d cluster create kidle --registry-use k3d-kidle.localhost:16000
+	k3d cluster create kidle --registry-use k3d-kidle.localhost:16000  --volume /home/nicolas/fun/kidle:/kidle --port 30123:30123@server[0]
 
 # Delete a k3s-kidle k8s server
 k3s-delete:

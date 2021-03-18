@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: delve-debug
+spec:
+  type: NodePort
+  selector:
+    control-plane: controller-manager
+  ports:
+  - name: debug
+    port: 30123
+    targetPort: 30123
+    nodePort: 30123

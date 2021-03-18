@@ -1,0 +1,40 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: go-pv
+  labels:
+    source: local
+spec:
+  storageClassName: local-path
+  capacity:
+    storage: 256Mi
+  accessModes:
+  - ReadWriteOnce
+  local:
+    path: /kidle
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - k3d-kidle-server-0
+  persistentVolumeReclaimPolicy: Retain
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: go-pvc2
+spec:
+  storageClassName: local-path
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 256Mi
+  selector:
+    matchLabels:
+      source: local
