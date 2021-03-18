@@ -34,7 +34,7 @@ import (
 var (
 	deployOwnerKey = ".metadata.controller"
 	apiGVStr       = kidlev1beta1.GroupVersion.String()
-	finalizerName = kidlev1beta1.GroupVersion.Group + "/finalizer"
+	finalizerName  = kidlev1beta1.GroupVersion.Group + "/finalizer"
 )
 
 // IdlingResourceReconciler reconciles a IdlingResource object
