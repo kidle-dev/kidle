@@ -18,15 +18,15 @@ package controllers
 
 import (
 	"context"
+	"github.com/go-logr/logr"
+	"github.com/orphaner/kidle/utils/pointer"
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	kidlev1beta1 "github.com/orphaner/kidle/api/v1beta1"
 )
@@ -66,7 +66,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	switch ref.Kind {
 	case "Deployment":
 		var deploy v1.Deployment
-		nn := types.NamespacedName{
+		nn := types.NamespacedName {
 			Namespace: req.Namespace,
 			Name:      ref.Name,
 		}
@@ -77,9 +77,13 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		if err := controllerutil.SetControllerReference(&ir, &deploy, r.Scheme); err != nil {
 			return ctrl.Result{}, err
 		}
+		if err := r.Update(ctx, &deploy); err != nil {
+			log.Error(err, "unable to update controller reference")
+			return ctrl.Result{}, err
+		}
+
 		if ir.Spec.Idle && *deploy.Spec.Replicas > 0 {
-			zero := int32(0)
-			deploy.Spec.Replicas = &zero
+			deploy.Spec.Replicas = pointer.Int32(0)
 			if err := r.Update(ctx, &deploy); err != nil {
 				log.Error(err, "unable to downscale deployment")
 				return ctrl.Result{}, err
@@ -98,8 +102,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			return ctrl.Result{}, err
 		}
 		if ir.Spec.Idle && *st.Spec.Replicas > 0 {
-			zero := int32(0)
-			st.Spec.Replicas = &zero
+			st.Spec.Replicas = pointer.Int32(0)
 			if err := r.Update(ctx, &st); err != nil {
 				log.Error(err, "unable to downscale statefulset")
 				return ctrl.Result{}, err
