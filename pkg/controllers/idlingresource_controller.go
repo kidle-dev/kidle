@@ -90,6 +90,14 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			}
 			log.V(1).Info("deployment idled", "name", ref.Name)
 		}
+		if !ir.Spec.Idle && *deploy.Spec.Replicas == 0 {
+			deploy.Spec.Replicas = pointer.Int32(1)
+			if err := r.Update(ctx, &deploy); err != nil {
+				log.Error(err, "unable to wakeup deployment")
+				return ctrl.Result{}, err
+			}
+			log.V(1).Info("deployment waked up", "name", ref.Name)
+		}
 
 	case "StatefulSet":
 		var st v1.StatefulSet
