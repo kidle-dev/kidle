@@ -21,12 +21,14 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
 	v1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"time"
 
 	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
 )
@@ -71,6 +73,9 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			Name:      ref.Name,
 		}
 		if err := r.Get(ctx, nn, &deploy); err != nil {
+			if errors.IsNotFound(err) {
+				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+			}
 			log.Error(err, "unable to read Deployment")
 			return ctrl.Result{}, err
 		}
