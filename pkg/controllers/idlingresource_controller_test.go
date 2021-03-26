@@ -4,7 +4,7 @@ import (
 	"context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/orphaner/kidle/pkg/api/v1beta1"
+	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -54,17 +54,17 @@ var deploy = appsv1.Deployment{
 }
 
 var irKey = types.NamespacedName{Name: "ir", Namespace: "ns"}
-var ir = v1beta1.IdlingResource{
+var ir = kidlev1beta1.IdlingResource{
 	TypeMeta: metav1.TypeMeta{
 		Kind:       "IdlingResource",
-		APIVersion: "kidle.beroot.org/v1beta1", // v1beta1.GroupVersion.String()
+		APIVersion: "kidle.beroot.org/v1beta1", // kidlev1beta1.GroupVersion.String()
 	},
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      irKey.Name,
 		Namespace: irKey.Namespace,
 	},
-	Spec: v1beta1.IdlingResourceSpec{
-		IdlingResourceRef: v1beta1.CrossVersionObjectReference{
+	Spec: kidlev1beta1.IdlingResourceSpec{
+		IdlingResourceRef: kidlev1beta1.CrossVersionObjectReference{
 			Kind:       "Deployment",
 			Name:       "nginx",
 			APIVersion: "apps/appsv1",
@@ -89,7 +89,7 @@ var _ = Describe("IdlingResource Controller", func() {
 			Expect(k8sClient.Create(ctx, &ir)).Should(Succeed())
 
 			// Wait for the IdlingResource object to be created
-			createdIR := &v1beta1.IdlingResource{}
+			createdIR := &kidlev1beta1.IdlingResource{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, irKey, createdIR)
 				return err == nil
@@ -130,7 +130,7 @@ var _ = Describe("IdlingResource Controller", func() {
 		})
 
 		It("Should idle the Deployment", func() {
-			ir := &v1beta1.IdlingResource{}
+			ir := &kidlev1beta1.IdlingResource{}
 			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
 
 			ir.Spec.Idle = true

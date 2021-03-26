@@ -26,7 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	v1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
+	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
 	"github.com/orphaner/kidle/pkg/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -39,7 +39,7 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
-	_ = v1beta1.AddToScheme(scheme)
+	_ = kidlev1beta1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
