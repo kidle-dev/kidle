@@ -88,7 +88,7 @@ var _ = Describe("IdlingResource Controller", func() {
 			By("Creating the IdlingResource object")
 			Expect(k8sClient.Create(ctx, &ir)).Should(Succeed())
 
-			// Wait for the IdlingResource object to be created
+			By("Validation of the IdlingResource creation")
 			createdIR := &kidlev1beta1.IdlingResource{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, irKey, createdIR)
@@ -111,6 +111,7 @@ var _ = Describe("IdlingResource Controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
+			By("Checking for OwnerReference to be set")
 			Eventually(func() ([]metav1.OwnerReference, error) {
 				d := &appsv1.Deployment{}
 				err := k8sClient.Get(ctx, deployKey, d)
@@ -126,14 +127,35 @@ var _ = Describe("IdlingResource Controller", func() {
 			By("Getting the Deployment")
 			d := &appsv1.Deployment{}
 			Expect(k8sClient.Get(ctx, deployKey, d)).Should(Succeed())
+
+			By("Checking that Replicas has not changed")
 			Expect(d.Spec.Replicas).Should(Equal(deploy.Spec.Replicas))
 		})
 
 		It("Should idle the Deployment", func() {
+			By("Idling the deployment")
 			ir := &kidlev1beta1.IdlingResource{}
 			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
 
 			ir.Spec.Idle = true
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			By("Checking that Replicas == 0")
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(0)))
+		})
+
+		It("Should wakeup the Deployment", func() {
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+
+			ir.Spec.Idle = false
 			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
 
 			// We'll need to wait until the controller has idled the Deployment
@@ -144,7 +166,60 @@ var _ = Describe("IdlingResource Controller", func() {
 					return nil, err
 				}
 				return d.Spec.Replicas, nil
-			}, timeout, interval).Should(Equal(pointer.Int32(0)))
+			}, timeout, interval).Should(Equal(pointer.Int32(1)))
 		})
+
+		//It("Should wakeup the Deployment to previous replicas", func() {
+		//	ir := &kidlev1beta1.IdlingResource{}
+		//	Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+		//
+		//	ir.Spec.Idle = false
+		//	Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+		//
+		//	d := &appsv1.Deployment{}
+		//	Expect(k8sClient.Get(ctx, deployKey, d)).Should(Succeed())
+		//
+		//	d.Spec.Replicas = pointer.Int32(2)
+		//	Expect(k8sClient.Update(ctx, d)).Should(Succeed())
+		//
+		//	Eventually(func() (*int32, error) {
+		//		d := &appsv1.Deployment{}
+		//		err := k8sClient.Get(ctx, deployKey, d)
+		//		if err != nil {
+		//			return nil, err
+		//		}
+		//		return d.Spec.Replicas, nil
+		//	}, timeout, interval).Should(Equal(pointer.Int32(2)))
+		//
+		//
+		//	ir.Spec.Idle = true
+		//	Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+		//
+		//	// We'll need to wait until the controller has idled the Deployment
+		//	By("idling")
+		//	Eventually(func() (*int32, error) {
+		//		d := &appsv1.Deployment{}
+		//		err := k8sClient.Get(ctx, deployKey, d)
+		//		if err != nil {
+		//			return nil, err
+		//		}
+		//		return d.Spec.Replicas, nil
+		//	}, timeout, interval).Should(Equal(pointer.Int32(0)))
+		//
+		//
+		//	ir.Spec.Idle = false
+		//	Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+		//
+		//	// We'll need to wait until the controller has waked up the Deployment
+		//	By("waking up")
+		//	Eventually(func() (*int32, error) {
+		//		d := &appsv1.Deployment{}
+		//		err := k8sClient.Get(ctx, deployKey, d)
+		//		if err != nil {
+		//			return nil, err
+		//		}
+		//		return d.Spec.Replicas, nil
+		//	}, timeout, interval).Should(Equal(pointer.Int32(2)))
+		//})
 	})
 })
