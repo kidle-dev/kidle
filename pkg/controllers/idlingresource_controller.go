@@ -28,13 +28,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	v1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
+	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
 )
 
 var (
 	deployOwnerKey = ".metadata.controller"
-	apiGVStr       = v1beta1.GroupVersion.String()
-	finalizerName  = v1beta1.GroupVersion.Group + "/finalizer"
+	apiGVStr       = kidlev1beta1.GroupVersion.String()
+	finalizerName  = kidlev1beta1.GroupVersion.Group + "/finalizer"
 )
 
 // IdlingResourceReconciler reconciles a IdlingResource object
@@ -54,7 +54,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	log := r.Log.WithValues("idlingresource", req.NamespacedName)
 
 	// Load the IdlingResource by name and setup finalizer
-	var ir v1beta1.IdlingResource
+	var ir kidlev1beta1.IdlingResource
 	if err := r.Get(ctx, req.NamespacedName, &ir); err != nil {
 		log.Error(err, "unable to read IdlingResource")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -114,7 +114,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	return ctrl.Result{}, nil
 }
 
-func (r *IdlingResourceReconciler) finalizer(ctx context.Context, log logr.Logger, ir *v1beta1.IdlingResource) (ctrl.Result, error) {
+func (r *IdlingResourceReconciler) finalizer(ctx context.Context, log logr.Logger, ir *kidlev1beta1.IdlingResource) (ctrl.Result, error) {
 
 	controllerutil.AddFinalizer(ir, finalizerName)
 
@@ -149,7 +149,7 @@ func (r *IdlingResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1beta1.IdlingResource{}).
+		For(&kidlev1beta1.IdlingResource{}).
 		Owns(&v1.Deployment{}).
 		Complete(r)
 }
