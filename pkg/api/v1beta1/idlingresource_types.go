@@ -15,8 +15,12 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/orphaner/kidle/pkg/utils/array"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// IdlingResourceFinalizerName is the name of the idlingresource finalizer
+const IdlingResourceFinalizerName = "idlingresource.finalizers.kidle.beroot.org"
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -96,6 +100,26 @@ type IdlingResource struct {
 
 	Spec   IdlingResourceSpec   `json:"spec,omitempty"`
 	Status IdlingResourceStatus `json:"status,omitempty"`
+}
+
+// IsBeingDeleted returns true if a deletion timestamp is set
+func (ss *IdlingResource) IsBeingDeleted() bool {
+	return !ss.ObjectMeta.DeletionTimestamp.IsZero()
+}
+
+// HasFinalizer returns true if the item has the specified finalizer
+func (ss *IdlingResource) HasFinalizer(finalizerName string) bool {
+	return array.ContainsString(ss.Finalizers, finalizerName)
+}
+
+// AddFinalizer adds the specified finalizer
+func (ss *IdlingResource) AddFinalizer(finalizerName string) {
+	ss.ObjectMeta.Finalizers = append(ss.ObjectMeta.Finalizers, finalizerName)
+}
+
+// RemoveFinalizer removes the specified finalizer
+func (ss *IdlingResource) RemoveFinalizer(finalizerName string) {
+	ss.ObjectMeta.Finalizers = array.RemoveString(ss.ObjectMeta.Finalizers, finalizerName)
 }
 
 // +kubebuilder:object:root=true
