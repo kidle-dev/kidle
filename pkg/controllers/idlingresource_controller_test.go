@@ -94,10 +94,16 @@ var _ = Describe("IdlingResource Controller", func() {
 				err := k8sClient.Get(ctx, irKey, createdIR)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdIR.Spec.Idle).Should(Equal(false))
-			Expect(createdIR.Spec.IdlingResourceRef.Name).Should(Equal("nginx"))
-			Expect(createdIR.Spec.IdlingResourceRef.Kind).Should(Equal("Deployment"))
-			Expect(createdIR.Spec.IdlingResourceRef.APIVersion).Should(Equal("apps/appsv1"))
+			Expect(createdIR.Spec).To(Equal(kidlev1beta1.IdlingResourceSpec{
+				IdlingResourceRef: kidlev1beta1.CrossVersionObjectReference{
+					Name:       "nginx",
+					Kind:       "Deployment",
+					APIVersion: "apps/appsv1",
+				},
+				Idle:           false,
+				IdlingStrategy: nil,
+				WakeupStrategy: nil,
+			}))
 		})
 
 		It("Owns a Deployment", func() {
@@ -169,57 +175,55 @@ var _ = Describe("IdlingResource Controller", func() {
 			}, timeout, interval).Should(Equal(pointer.Int32(1)))
 		})
 
-		//It("Should wakeup the Deployment to previous replicas", func() {
-		//	ir := &kidlev1beta1.IdlingResource{}
-		//	Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
-		//
-		//	ir.Spec.Idle = false
-		//	Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
-		//
-		//	d := &appsv1.Deployment{}
-		//	Expect(k8sClient.Get(ctx, deployKey, d)).Should(Succeed())
-		//
-		//	d.Spec.Replicas = pointer.Int32(2)
-		//	Expect(k8sClient.Update(ctx, d)).Should(Succeed())
-		//
-		//	Eventually(func() (*int32, error) {
-		//		d := &appsv1.Deployment{}
-		//		err := k8sClient.Get(ctx, deployKey, d)
-		//		if err != nil {
-		//			return nil, err
-		//		}
-		//		return d.Spec.Replicas, nil
-		//	}, timeout, interval).Should(Equal(pointer.Int32(2)))
-		//
-		//
-		//	ir.Spec.Idle = true
-		//	Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
-		//
-		//	// We'll need to wait until the controller has idled the Deployment
-		//	By("idling")
-		//	Eventually(func() (*int32, error) {
-		//		d := &appsv1.Deployment{}
-		//		err := k8sClient.Get(ctx, deployKey, d)
-		//		if err != nil {
-		//			return nil, err
-		//		}
-		//		return d.Spec.Replicas, nil
-		//	}, timeout, interval).Should(Equal(pointer.Int32(0)))
-		//
-		//
-		//	ir.Spec.Idle = false
-		//	Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
-		//
-		//	// We'll need to wait until the controller has waked up the Deployment
-		//	By("waking up")
-		//	Eventually(func() (*int32, error) {
-		//		d := &appsv1.Deployment{}
-		//		err := k8sClient.Get(ctx, deployKey, d)
-		//		if err != nil {
-		//			return nil, err
-		//		}
-		//		return d.Spec.Replicas, nil
-		//	}, timeout, interval).Should(Equal(pointer.Int32(2)))
-		//})
+		It("Should wakeup the Deployment to previous replicas", func() {
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+
+			ir.Spec.Idle = false
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			d := &appsv1.Deployment{}
+			Expect(k8sClient.Get(ctx, deployKey, d)).Should(Succeed())
+
+			d.Spec.Replicas = pointer.Int32(2)
+			Expect(k8sClient.Update(ctx, d)).Should(Succeed())
+
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(2)))
+
+			ir.Spec.Idle = true
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			// We'll need to wait until the controller has idled the Deployment
+			By("idling")
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(0)))
+
+			ir.Spec.Idle = false
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			// We'll need to wait until the controller has waked up the Deployment
+			By("waking up")
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(2)))
+		})
 	})
 })
