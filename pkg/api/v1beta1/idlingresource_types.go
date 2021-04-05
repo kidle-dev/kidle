@@ -92,6 +92,9 @@ type IdlingResourceStatus struct {
 // +kubebuilder:resource:shortName=ir
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Idle",type="boolean",JSONPath=".spec.idle"
+// +kubebuilder:printcolumn:name="RefKind",type="string",JSONPath=".spec.idlingResourceRef.kind"
+// +kubebuilder:printcolumn:name="RefName",type="string",JSONPath=".spec.idlingResourceRef.name"
 
 // IdlingResource is the Schema for the idlingresources API
 type IdlingResource struct {

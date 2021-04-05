@@ -8,6 +8,16 @@ metadata:
   creationTimestamp: null
   name: idlingresources.kidle.beroot.org
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.idle
+    name: Idle
+    type: boolean
+  - JSONPath: .spec.idlingResourceRef.kind
+    name: RefKind
+    type: string
+  - JSONPath: .spec.idlingResourceRef.name
+    name: RefName
+    type: string
   group: kidle.beroot.org
   names:
     kind: IdlingResource
