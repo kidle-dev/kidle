@@ -9,38 +9,33 @@ import (
 	"github.com/orphaner/kidle/pkg/utils/pointer"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
-	"time"
 )
+
+type Idler interface {
+	SetReference(ctx context.Context, instanceName string) error
+	RemoveAnnotations(ctx context.Context) error
+
+	NeedIdle(instance *kidlev1beta1.IdlingResource) bool
+	NeedWakeup(instance *kidlev1beta1.IdlingResource) bool
+
+	Idle(ctx context.Context) error
+	Wakeup(ctx context.Context) (*int32, error)
+}
 
 type DeploymentIdler struct {
 	client.Client
 	Log        logr.Logger
-	deployment *v1.Deployment
+	Deployment *v1.Deployment
 }
 
-func (r *IdlingResourceReconciler) ReconcileDeployment(ctx context.Context, instance *kidlev1beta1.IdlingResource) (ctrl.Result, error) {
+func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, instance *kidlev1beta1.IdlingResource, idler Idler) (ctrl.Result, error) {
 
-	var deploy v1.Deployment
-	if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.IdlingResourceRef.Name}, &deploy); err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("unable to read Deployment: %v", err)
-	}
-
-	idler := &DeploymentIdler{
-		Client:     r.Client,
-		Log:        r.Log,
-		deployment: &deploy,
-	}
 
 	// Add a reference on the deployment
-	err := idler.setReference(ctx, instance.Name)
+	err := idler.SetReference(ctx, instance.Name)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("error during adding annotation: %v", err)
 	}
@@ -63,7 +58,7 @@ func (r *IdlingResourceReconciler) ReconcileDeployment(ctx context.Context, inst
 			fmt.Sprintf("Restored to %d", *replicas))
 
 		// Remove deployment annotations
-		if err := idler.removeAnnotations(ctx); err != nil {
+		if err := idler.RemoveAnnotations(ctx); err != nil {
 			r.Event(instance,
 				corev1.EventTypeWarning,
 				"removing annotations",
@@ -91,7 +86,7 @@ func (r *IdlingResourceReconciler) ReconcileDeployment(ctx context.Context, inst
 	}
 
 	// Wakeup deployment
-	if !instance.Spec.Idle && *deploy.Spec.Replicas == 0 {
+	if idler.NeedWakeup(instance) {
 		replicas, err := idler.Wakeup(ctx)
 		if err != nil {
 			r.Event(instance,
@@ -108,7 +103,7 @@ func (r *IdlingResourceReconciler) ReconcileDeployment(ctx context.Context, inst
 	}
 
 	// Idle Deployment
-	if instance.Spec.Idle && *deploy.Spec.Replicas > 0 {
+	if idler.NeedIdle(instance) {
 		if err := idler.Idle(ctx); err != nil {
 			r.Event(instance,
 				corev1.EventTypeWarning,
@@ -125,12 +120,20 @@ func (r *IdlingResourceReconciler) ReconcileDeployment(ctx context.Context, inst
 	return ctrl.Result{}, nil
 }
 
-func (i *DeploymentIdler) setReference(ctx context.Context, instanceName string) error {
-	if !k8s.HasAnnotation(&i.deployment.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference) {
-		i.Log.Info(fmt.Sprintf("Set reference for deployment %v", i.deployment.Name))
+func (i *DeploymentIdler) NeedIdle(instance *kidlev1beta1.IdlingResource) bool {
+	return instance.Spec.Idle && *i.Deployment.Spec.Replicas > 0
+}
 
-		k8s.AddAnnotation(&i.deployment.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference, instanceName)
-		if err := i.Update(ctx, i.deployment); err != nil {
+func (i *DeploymentIdler) NeedWakeup(instance *kidlev1beta1.IdlingResource) bool {
+	return !instance.Spec.Idle && *i.Deployment.Spec.Replicas == 0
+}
+
+func (i *DeploymentIdler) SetReference(ctx context.Context, instanceName string) error {
+	if !k8s.HasAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference) {
+		i.Log.Info(fmt.Sprintf("Set reference for deployment %v", i.Deployment.Name))
+
+		k8s.AddAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference, instanceName)
+		if err := i.Update(ctx, i.Deployment); err != nil {
 			i.Log.Error(err, "unable to add reference in annotations")
 			return err
 		}
@@ -138,14 +141,14 @@ func (i *DeploymentIdler) setReference(ctx context.Context, instanceName string)
 	return nil
 }
 
-func (i *DeploymentIdler) removeAnnotations(ctx context.Context) error {
-	if k8s.HasAnnotation(&i.deployment.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference) ||
-		k8s.HasAnnotation(&i.deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas) {
-		i.Log.Info(fmt.Sprintf("Remove annotations for deployment %v", i.deployment.Name))
+func (i *DeploymentIdler) RemoveAnnotations(ctx context.Context) error {
+	if k8s.HasAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference) ||
+		k8s.HasAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas) {
+		i.Log.Info(fmt.Sprintf("Remove annotations for deployment %v", i.Deployment.Name))
 
-		k8s.RemoveAnnotation(&i.deployment.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference)
-		k8s.RemoveAnnotation(&i.deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas)
-		if err := i.Update(ctx, i.deployment); err != nil {
+		k8s.RemoveAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference)
+		k8s.RemoveAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas)
+		if err := i.Update(ctx, i.Deployment); err != nil {
 			i.Log.Error(err, "unable to remove kidle annotations")
 			return err
 		}
@@ -154,16 +157,16 @@ func (i *DeploymentIdler) removeAnnotations(ctx context.Context) error {
 }
 
 func (i *DeploymentIdler) Idle(ctx context.Context) error {
-	k8s.AddAnnotation(&i.deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas, strconv.Itoa(int(*i.deployment.Spec.Replicas)))
-	if i.deployment.Spec.Replicas != pointer.Int32(0) {
-		i.deployment.Spec.Replicas = pointer.Int32(0)
-		if err := i.Update(ctx, i.deployment); err != nil {
+	k8s.AddAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas, strconv.Itoa(int(*i.Deployment.Spec.Replicas)))
+	if i.Deployment.Spec.Replicas != pointer.Int32(0) {
+		i.Deployment.Spec.Replicas = pointer.Int32(0)
+		if err := i.Update(ctx, i.Deployment); err != nil {
 			i.Log.Error(err, "unable to downscale deployment")
 			return err
 		}
-		i.Log.V(1).Info("deployment idled", "name", i.deployment.Name)
+		i.Log.V(1).Info("deployment idled", "name", i.Deployment.Name)
 	} else {
-		i.Log.V(2).Info("deployment already idled", "name", i.deployment.Name)
+		i.Log.V(2).Info("deployment already idled", "name", i.Deployment.Name)
 	}
 	return nil
 }
@@ -171,22 +174,22 @@ func (i *DeploymentIdler) Idle(ctx context.Context) error {
 func (i *DeploymentIdler) Wakeup(ctx context.Context) (*int32, error) {
 	previousReplicas := pointer.Int32(1)
 
-	if metadataPreviousReplicas, found := k8s.GetAnnotation(&i.deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas); found {
+	if metadataPreviousReplicas, found := k8s.GetAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas); found {
 		if v, err := strconv.Atoi(metadataPreviousReplicas); err != nil {
 			return nil, err
 		} else {
 			previousReplicas = pointer.Int32(int32(v))
 		}
 	}
-	if i.deployment.Spec.Replicas != previousReplicas {
-		i.deployment.Spec.Replicas = previousReplicas
-		if err := i.Update(ctx, i.deployment); err != nil {
+	if i.Deployment.Spec.Replicas != previousReplicas {
+		i.Deployment.Spec.Replicas = previousReplicas
+		if err := i.Update(ctx, i.Deployment); err != nil {
 			i.Log.Error(err, "unable to wakeup deployment")
 			return nil, err
 		}
-		i.Log.V(1).Info("deployment waked up", "name", i.deployment.Name)
+		i.Log.V(1).Info("deployment waked up", "name", i.Deployment.Name)
 	} else {
-		i.Log.V(2).Info("deployment already waked up", "name", i.deployment.Name)
+		i.Log.V(2).Info("deployment already waked up", "name", i.Deployment.Name)
 	}
 	return previousReplicas, nil
 }

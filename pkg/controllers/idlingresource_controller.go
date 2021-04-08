@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"time"
 )
 
 var (
@@ -88,7 +89,23 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	ref := instance.Spec.IdlingResourceRef
 	switch ref.Kind {
 	case "Deployment":
-		return r.ReconcileDeployment(ctx, &instance)
+
+		var deploy v1.Deployment
+		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.IdlingResourceRef.Name}, &deploy); err != nil {
+			if errors.IsNotFound(err) {
+				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("unable to read Deployment: %v", err)
+		}
+
+		var idler Idler
+		idler = &DeploymentIdler{
+			Client:     r.Client,
+			Log:        r.Log,
+			Deployment: &deploy,
+		}
+		
+		return r.ReconcileWithIdler(ctx, &instance, idler)
 
 	case "StatefulSet":
 		var st v1.StatefulSet
