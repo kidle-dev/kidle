@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
-	"github.com/orphaner/kidle/pkg/utils/k8s"
+	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
+	"github.com/orphaner/kidle/pkg/utils/array"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
 	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,16 +33,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
-
-	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 var (
 	deployOwnerKey = ".metadata.controller"
 	apiGVStr       = kidlev1beta1.GroupVersion.String()
-	finalizerName  = kidlev1beta1.GroupVersion.Group + "/finalizer"
 )
 
 // IdlingResourceReconciler reconciles a IdlingResource object
@@ -73,50 +73,22 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return reconcile.Result{}, err
 	}
 
-	if instance.IsBeingDeleted() {
-		if containsString(instance.GetFinalizers(), finalizerName) {
-			// TODO scale back to previous state
-			// TODO remove finalizer only if scaled back is successful
-			controllerutil.RemoveFinalizer(&instance, finalizerName)
-			r.Update(ctx, &instance)
-		}
-	}
-
+	// Add finalizer for any kidleable kind
 	if !instance.HasFinalizer(kidlev1beta1.IdlingResourceFinalizerName) {
-		err := r.addFinalizer(ctx, instance)
+		r.Log.Info(fmt.Sprintf("AddFinalizer for %v", req.NamespacedName))
+		err := r.addFinalizer(ctx, &instance)
 		if err != nil {
-			// TODO k8s event
-			return reconcile.Result{}, fmt.Errorf("error when handling idling resource finalizer: %v", err)
+			r.Event(&instance, corev1.EventTypeWarning, "Adding finalizer", fmt.Sprintf("Failed to add finalizer: %s", err))
+			return reconcile.Result{}, fmt.Errorf("error when adding finalizer: %v", err)
 		}
+		r.Event(&instance, corev1.EventTypeNormal, "Added", "Object finalizer is added")
 	}
 
 	// Reconcile
 	ref := instance.Spec.IdlingResourceRef
 	switch ref.Kind {
 	case "Deployment":
-		var deploy v1.Deployment
-		if err := r.Get(ctx, k8s.ToNamespacedName(&req, &ref), &deploy); err != nil {
-			if errors.IsNotFound(err) {
-				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("unable to read Deployment: %v", err)
-		}
-
-		// TODO check possible mistake? Is a deployment owned by an ir? NO! use watch instead?
-		if err := controllerutil.SetControllerReference(&instance, &deploy, r.Scheme); err != nil {
-			return ctrl.Result{}, err
-		}
-		if err := r.Update(ctx, &deploy); err != nil {
-			log.Error(err, "unable to update controller reference")
-			return ctrl.Result{}, err
-		}
-
-		idler := &Idler{
-			Client:        r.Client,
-			EventRecorder: r.EventRecorder,
-			Log:           log,
-		}
-		return idler.Reconcile(ctx, instance, &deploy)
+		return r.ReconcileDeployment(ctx, &instance)
 
 	case "StatefulSet":
 		var st v1.StatefulSet
@@ -141,11 +113,22 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	return ctrl.Result{}, nil
 }
 
-func (r *IdlingResourceReconciler) addFinalizer(ctx context.Context, instance kidlev1beta1.IdlingResource) error {
-	controllerutil.AddFinalizer(&instance, finalizerName)
-	err := r.Update(ctx, &instance)
+func (r *IdlingResourceReconciler) addFinalizer(ctx context.Context, instance *kidlev1beta1.IdlingResource) error {
+	controllerutil.AddFinalizer(instance, kidlev1beta1.IdlingResourceFinalizerName)
+	err := r.Update(ctx, instance)
 	if err != nil {
 		return fmt.Errorf("failed to update idling resource finalizer: %v", err)
+	}
+	return nil
+}
+
+func (r *IdlingResourceReconciler) removeFinalizer(ctx context.Context, instance *kidlev1beta1.IdlingResource) error {
+	if array.ContainsString(instance.GetFinalizers(), kidlev1beta1.IdlingResourceFinalizerName) {
+		controllerutil.RemoveFinalizer(instance, kidlev1beta1.IdlingResourceFinalizerName)
+		err := r.Update(ctx, instance)
+		if err != nil {
+			return fmt.Errorf("error when removing idling resource finalizer: %v", err)
+		}
 	}
 	return nil
 }
@@ -172,16 +155,25 @@ func (r *IdlingResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kidlev1beta1.IdlingResource{}).
-		Owns(&v1.Deployment{}).
+		//Owns(&v1.Deployment{}).
+		Watches(
+			&source.Kind{Type: &v1.Deployment{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: handler.ToRequestsFunc(r.deploymentForIdlingResourceMapper),
+			},
+		).
 		Complete(r)
 }
 
-// Helper functions to check and remove string from a slice of strings.
-func containsString(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
-		}
+func (r *IdlingResourceReconciler) deploymentForIdlingResourceMapper(object handler.MapObject) []reconcile.Request {
+	ref, found := object.Meta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference]
+	if !found {
+		return nil
 	}
-	return false
+
+	reqs := make([]reconcile.Request, 1)
+	reqs[0].NamespacedName.Name = ref
+	reqs[0].NamespacedName.Namespace = object.Meta.GetNamespace()
+	r.Log.Info("requesting reconciliation", "IdlingResource", reqs[0].NamespacedName)
+	return reqs
 }

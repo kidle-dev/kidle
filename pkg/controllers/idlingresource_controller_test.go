@@ -106,7 +106,7 @@ var _ = Describe("IdlingResource Controller", func() {
 			}))
 		})
 
-		It("Owns a Deployment", func() {
+		It("Is referenced by a Deployment", func() {
 
 			By("Creating the Deployment object")
 			Expect(k8sClient.Create(ctx, &deploy)).Should(Succeed())
@@ -117,15 +117,15 @@ var _ = Describe("IdlingResource Controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			By("Checking for OwnerReference to be set")
-			Eventually(func() ([]metav1.OwnerReference, error) {
+			By("Checking for reference to be set in annotations")
+			Eventually(func() (string, error) {
 				d := &appsv1.Deployment{}
 				err := k8sClient.Get(ctx, deployKey, d)
 				if err != nil {
-					return nil, err
+					return "", err
 				}
-				return d.ObjectMeta.GetOwnerReferences(), nil
-			}, timeout, interval).Should(Not(BeEmpty()))
+				return d.ObjectMeta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference], nil
+			}, timeout, interval).Should(Equal("ir"))
 		})
 
 		It("It should not have idled the deployment", func() {

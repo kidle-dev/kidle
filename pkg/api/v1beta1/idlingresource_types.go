@@ -22,8 +22,12 @@ import (
 // IdlingResourceFinalizerName is the name of the idlingresource finalizer
 const IdlingResourceFinalizerName = "idlingresource.finalizers.kidle.beroot.org"
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// TODO
+const MetadataIdlingResourceReference = "kidle.beroot.org/idling-resource-reference"
+
+// TODO
+const MetadataPreviousReplicas = "kidle.beroot.org/previous-replicas"
+
 // IdlingResourceSpec defines the desired state of IdlingResource
 type IdlingResourceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
