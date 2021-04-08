@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
+	"github.com/orphaner/kidle/pkg/utils/k8s"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -224,6 +225,32 @@ var _ = Describe("IdlingResource Controller", func() {
 				}
 				return d.Spec.Replicas, nil
 			}, timeout, interval).Should(Equal(pointer.Int32(2)))
+		})
+
+		It("Should wakeup and cleanup Deployment when removing the IdlingResource", func() {
+			ir := &kidlev1beta1.IdlingResource{}
+			k8sClient.Get(ctx, irKey, ir)
+
+			By("deleting the IdlingResource")
+			Expect(k8sClient.Delete(ctx, ir)).Should(Succeed())
+
+			By("checking the Deployment has not been deleted")
+			d := &appsv1.Deployment{}
+			Consistently(func() error {
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return err
+				}
+				return nil
+
+			}, 2*time.Second, interval).Should(Succeed())
+
+			By("checking the Deployment annotations have been removed")
+			Expect(k8s.HasAnnotation(&d.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas)).ShouldNot(BeTrue())
+			Expect(k8s.HasAnnotation(&d.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference)).ShouldNot(BeTrue())
+
+			By("checking the Deployment has been scaled up")
+			Expect(d.Spec.Replicas).Should(Equal(pointer.Int32(2)))
 		})
 	})
 })
