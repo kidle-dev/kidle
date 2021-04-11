@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
+	"github.com/orphaner/kidle/pkg/controllers/idler"
 	"github.com/orphaner/kidle/pkg/utils/array"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -98,13 +98,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			return ctrl.Result{}, fmt.Errorf("unable to read Deployment: %v", err)
 		}
 
-		var idler Idler
-		idler = &DeploymentIdler{
-			Client:     r.Client,
-			Log:        r.Log,
-			Deployment: &deploy,
-		}
-		
+		idler := idler.NewDeploymentIdler(r.Client, log, &deploy)
 		return r.ReconcileWithIdler(ctx, &instance, idler)
 
 	case "StatefulSet":
@@ -130,6 +124,94 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	return ctrl.Result{}, nil
 }
 
+func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, instance *kidlev1beta1.IdlingResource, idler idler.Idler) (ctrl.Result, error) {
+
+	// Add a reference on the deployment
+	err := idler.SetReference(ctx, instance.Name)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error during adding annotation: %v", err)
+	}
+
+	// Deal with the idling resource deletion
+	if instance.IsBeingDeleted() {
+
+		// Wakeup deployment
+		replicas, err := idler.Wakeup(ctx)
+		if err != nil {
+			r.Event(instance,
+				corev1.EventTypeWarning,
+				"RestoringDeployment",
+				fmt.Sprintf("Failed to restore deployment %s: %s", instance.Spec.IdlingResourceRef.Name, err))
+			return ctrl.Result{}, fmt.Errorf("error during restoring: %v", err)
+		}
+		r.Event(instance,
+			corev1.EventTypeNormal,
+			"RestoringDeployment",
+			fmt.Sprintf("Restored to %d", *replicas))
+
+		// Remove deployment annotations
+		if err := idler.RemoveAnnotations(ctx); err != nil {
+			r.Event(instance,
+				corev1.EventTypeWarning,
+				"removing annotations",
+				fmt.Sprintf("Failed to remove annotations: %s", err))
+			return ctrl.Result{}, fmt.Errorf("error when removing annotations: %v", err)
+		}
+		r.Event(instance,
+			corev1.EventTypeNormal,
+			"Deleted",
+			"Kidle annotations on deployment are deleted")
+
+		// All is OK, remove the finalizer
+		if err := r.removeFinalizer(ctx, instance); err != nil {
+			r.Event(instance,
+				corev1.EventTypeWarning,
+				"deleting finalizer",
+				fmt.Sprintf("Failed to delete finalizer: %s", err))
+			return ctrl.Result{}, fmt.Errorf("error when deleting finalizer: %v", err)
+		}
+		r.Event(instance,
+			corev1.EventTypeNormal,
+			"Deleted",
+			"Object finalizer is deleted")
+		return ctrl.Result{}, nil
+	}
+
+	// Wakeup deployment
+	if idler.NeedWakeup(instance) {
+		replicas, err := idler.Wakeup(ctx)
+		if err != nil {
+			r.Event(instance,
+				corev1.EventTypeWarning,
+				"ScalingDeployment",
+				fmt.Sprintf("Failed to wake up deployment %s: %s", instance.Spec.IdlingResourceRef.Name, err))
+			return ctrl.Result{}, fmt.Errorf("error during waking up: %v", err)
+		}
+		r.Event(instance,
+			corev1.EventTypeNormal,
+			"ScalingDeployment",
+			fmt.Sprintf("Scaled to %d", *replicas))
+		return ctrl.Result{}, nil
+	}
+
+	// Idle Deployment
+	if idler.NeedIdle(instance) {
+		if err := idler.Idle(ctx); err != nil {
+			r.Event(instance,
+				corev1.EventTypeWarning,
+				"ScalingDeployment",
+				fmt.Sprintf("Failed to idle deployment %s: %s", instance.Spec.IdlingResourceRef.Name, err))
+			return ctrl.Result{}, fmt.Errorf("error during idling: %v", err)
+		}
+		r.Event(instance,
+			corev1.EventTypeNormal,
+			"ScalingDeployment",
+			fmt.Sprintf("Scaled to 0"))
+		return ctrl.Result{}, nil
+	}
+	return ctrl.Result{}, nil
+}
+
 func (r *IdlingResourceReconciler) addFinalizer(ctx context.Context, instance *kidlev1beta1.IdlingResource) error {
 	controllerutil.AddFinalizer(instance, kidlev1beta1.IdlingResourceFinalizerName)
 	err := r.Update(ctx, instance)
@@ -152,23 +234,23 @@ func (r *IdlingResourceReconciler) removeFinalizer(ctx context.Context, instance
 
 func (r *IdlingResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	if err := mgr.GetFieldIndexer().IndexField(&v1.Deployment{}, deployOwnerKey, func(rawObj runtime.Object) []string {
-		// grab the deployment object, extract the owner...
-		deploy := rawObj.(*v1.Deployment)
-		owner := metav1.GetControllerOf(deploy)
-		if owner == nil {
-			return nil
-		}
-		// ...make sure it's a Deployment...
-		if owner.APIVersion != apiGVStr || owner.Kind != "Deployment" {
-			return nil
-		}
-
-		// ...and if so, return it
-		return []string{owner.Name}
-	}); err != nil {
-		return err
-	}
+	//if err := mgr.GetFieldIndexer().IndexField(&v1.Deployment{}, deployOwnerKey, func(rawObj runtime.Object) []string {
+	//	// grab the deployment object, extract the owner...
+	//	deploy := rawObj.(*v1.Deployment)
+	//	owner := metav1.GetControllerOf(deploy)
+	//	if owner == nil {
+	//		return nil
+	//	}
+	//	// ...make sure it's a Deployment...
+	//	if owner.APIVersion != apiGVStr || owner.Kind != "Deployment" {
+	//		return nil
+	//	}
+	//
+	//	// ...and if so, return it
+	//	return []string{owner.Name}
+	//}); err != nil {
+	//	return err
+	//}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kidlev1beta1.IdlingResource{}).
