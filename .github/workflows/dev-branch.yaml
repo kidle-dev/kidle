@@ -14,14 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     name: setup
     steps:
-    - name: Install ginkgo
-      run:  make ginkgo
-      shell: bash
-
-  build:
-    runs-on: ubuntu-latest
-    name: build
-    steps:
 
     - name: set repo name
       shell: bash
@@ -40,6 +32,15 @@ jobs:
       uses: RyanSiu1995/kubebuilder-action@v1.1
       with:
         version: 2.3.1
+
+    - name: Install ginkgo
+      run:  make ginkgo
+      shell: bash
+
+  build:
+    runs-on: ubuntu-latest
+    name: build
+    steps:
 
     - name: Run ginkgo tests
       run:  make gtest
