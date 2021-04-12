@@ -17,13 +17,8 @@ all: manager
 test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
 
-# Install ginkgo
-ginkgo:
-	go get github.com/onsi/ginkgo/ginkgo
-	go get github.com/onsi/gomega/...
-
 # Run ginkgo tests
-gtest:
+gtest: ginkgo
 	ginkgo -r -v
 
 # Build manager binary
@@ -107,6 +102,24 @@ ifeq (, $(shell which controller-gen))
 CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
+endif
+
+# find or download ginkgo
+# download ginkgo if necessary
+ginkgo:
+ifeq (, $(shell which ginkgo))
+	@{ \
+	set -e ;\
+	GINKGO_TMP_DIR=$$(mktemp -d) ;\
+	cd $$GINKGO_TMP_DIR ;\
+	go mod init tmp ;\
+	go get github.com/onsi/ginkgo/ginkgo ;\
+	go get github.com/onsi/gomega/... ;\
+	rm -rf $$GINKGO_TMP_DIR ;\
+	}
+GINKGO=$(GOBIN)/ginkgo
+else
+GINKGO=$(shell which ginkgo)
 endif
 
 # Create a k3d registry
