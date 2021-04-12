@@ -41,13 +41,13 @@ jobs:
       run:  make
       shell: bash
 
-#    - name: Install ginkgo
-#      run:  make ginkgo
-#      shell: bash
-#
-#    - name: Run ginkgo tests
-#      run:  make gtest
-#      shell: bash
+    - name: Install ginkgo
+      run:  make ginkgo
+      shell: bash
+
+    - name: Run ginkgo tests
+      run:  make gtest
+      shell: bash
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
