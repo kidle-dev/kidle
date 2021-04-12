@@ -28,6 +28,10 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
+    - name: Install ginkgo
+      run:  make ginkgo
+      shell: bash
+
     - name: Run ginkgo tests
       run:  make gtest
       shell: bash

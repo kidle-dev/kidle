@@ -17,6 +17,11 @@ all: manager
 test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
 
+# Install ginkgo
+ginkgo:
+	go get github.com/onsi/ginkgo/ginkgo
+	go get github.com/onsi/gomega/...
+
 # Run ginkgo tests
 gtest:
 	ginkgo -r -v
