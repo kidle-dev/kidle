@@ -1,0 +1,52 @@
+name: push
+on:
+  push:
+    branches:
+      - '*'         # matches every branch that doesn't contain a '/'
+      - '*/*'       # matches every branch containing a single '/'
+      - '**'        # matches every branch
+      - '!master'   # excludes master
+    tags:
+      - v*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: build
+    steps:
+
+    - name: set repo name
+      shell: bash
+      run: |
+        echo "REPOSITORY_NAME=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.16
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Run ginkgo tests
+      run:  make gtest
+      shell: bash
+
+    - name: Build code
+      run:  make
+      shell: bash
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        registry: quay.io/${{ github.repository_owner }}
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+    - name: "Build and Push Operator Image"
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: "${{ secrets.DOCKER_HUB_USERNAME }}/kidle-operator:${{ env.OPERATOR_IMAGE_TAG }}"
