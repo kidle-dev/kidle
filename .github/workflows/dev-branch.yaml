@@ -40,6 +40,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: build
+    needs: setup
     steps:
 
     - name: Run ginkgo tests
