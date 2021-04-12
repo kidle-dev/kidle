@@ -37,12 +37,6 @@ jobs:
       run:  make ginkgo
       shell: bash
 
-  build:
-    runs-on: ubuntu-latest
-    name: build
-    needs: setup
-    steps:
-
     - name: Run ginkgo tests
       run:  make gtest
       shell: bash
