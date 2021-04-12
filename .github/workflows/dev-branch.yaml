@@ -75,4 +75,4 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: "${{ secrets.DOCKER_HUB_USERNAME }}/kidle-operator:${{ env.OPERATOR_IMAGE_TAG }}"
+        tags: "kidle/kidle-operator:wip"
