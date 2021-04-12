@@ -72,4 +72,3 @@ func (i *DeploymentIdler) Wakeup(ctx context.Context) (*int32, error) {
 	}
 	return previousReplicas, nil
 }
-

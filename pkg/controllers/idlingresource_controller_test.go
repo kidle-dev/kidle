@@ -54,24 +54,63 @@ var deploy = appsv1.Deployment{
 	},
 }
 
-var irKey = types.NamespacedName{Name: "ir", Namespace: "ns"}
-var ir = kidlev1beta1.IdlingResource{
+var stsKey = types.NamespacedName{Name: "nginx-sts", Namespace: "ns"}
+var sts = appsv1.StatefulSet{
 	TypeMeta: metav1.TypeMeta{
-		Kind:       "IdlingResource",
-		APIVersion: "kidle.beroot.org/v1beta1", // kidlev1beta1.GroupVersion.String()
+		Kind:       "StatefulSet",
+		APIVersion: "apps/appsv1",
 	},
 	ObjectMeta: metav1.ObjectMeta{
-		Name:      irKey.Name,
-		Namespace: irKey.Namespace,
-	},
-	Spec: kidlev1beta1.IdlingResourceSpec{
-		IdlingResourceRef: kidlev1beta1.CrossVersionObjectReference{
-			Kind:       "Deployment",
-			Name:       "nginx",
-			APIVersion: "apps/appsv1",
+		Name:      stsKey.Name,
+		Namespace: stsKey.Namespace,
+		Labels: map[string]string{
+			"app": "nginx-sts",
 		},
-		Idle: false,
 	},
+	Spec: appsv1.StatefulSetSpec{
+		Replicas: pointer.Int32(1),
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app": "nginx-sts",
+			},
+		},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "nginx",
+				Namespace: "ns",
+				Labels: map[string]string{
+					"app": "nginx-sts",
+				},
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  "nginx",
+						Image: "nginx",
+					},
+				},
+			},
+		},
+	},
+}
+
+var irKey = types.NamespacedName{Name: "ir", Namespace: "ns"}
+
+func newIdlingResource(ref *kidlev1beta1.CrossVersionObjectReference) *kidlev1beta1.IdlingResource {
+	return &kidlev1beta1.IdlingResource{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "IdlingResource",
+			APIVersion: "kidle.beroot.org/v1beta1", // kidlev1beta1.GroupVersion.String()
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      irKey.Name,
+			Namespace: irKey.Namespace,
+		},
+		Spec: kidlev1beta1.IdlingResourceSpec{
+			IdlingResourceRef: *ref,
+			Idle:              false,
+		},
+	}
 }
 
 var _ = Describe("IdlingResource Controller", func() {
@@ -87,7 +126,12 @@ var _ = Describe("IdlingResource Controller", func() {
 		It("Has created an IdlingResource object", func() {
 
 			By("Creating the IdlingResource object")
-			Expect(k8sClient.Create(ctx, &ir)).Should(Succeed())
+			ref := kidlev1beta1.CrossVersionObjectReference{
+				Kind:       "Deployment",
+				Name:       deployKey.Name,
+				APIVersion: "apps/appsv1",
+			}
+			Expect(k8sClient.Create(ctx, newIdlingResource(&ref))).Should(Succeed())
 
 			By("Validation of the IdlingResource creation")
 			createdIR := &kidlev1beta1.IdlingResource{}
@@ -229,7 +273,7 @@ var _ = Describe("IdlingResource Controller", func() {
 
 		It("Should wakeup and cleanup Deployment when removing the IdlingResource", func() {
 			ir := &kidlev1beta1.IdlingResource{}
-			k8sClient.Get(ctx, irKey, ir)
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
 
 			By("deleting the IdlingResource")
 			Expect(k8sClient.Delete(ctx, ir)).Should(Succeed())
@@ -251,6 +295,182 @@ var _ = Describe("IdlingResource Controller", func() {
 
 			By("checking the Deployment has been scaled up")
 			Expect(d.Spec.Replicas).Should(Equal(pointer.Int32(2)))
+		})
+	})
+
+	Context("Initially", func() {
+		It("Has created an IdlingResource object", func() {
+
+			By("Creating the IdlingResource object")
+			ref := kidlev1beta1.CrossVersionObjectReference{
+				Kind:       "StatefulSet",
+				Name:       stsKey.Name,
+				APIVersion: "apps/appsv1",
+			}
+			Expect(k8sClient.Create(ctx, newIdlingResource(&ref))).Should(Succeed())
+
+			By("Validation of the IdlingResource creation")
+			createdIR := &kidlev1beta1.IdlingResource{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, irKey, createdIR)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdIR.Spec).To(Equal(kidlev1beta1.IdlingResourceSpec{
+				IdlingResourceRef: kidlev1beta1.CrossVersionObjectReference{
+					Name:       "nginx-sts",
+					Kind:       "StatefulSet",
+					APIVersion: "apps/appsv1",
+				},
+				Idle:           false,
+				IdlingStrategy: nil,
+				WakeupStrategy: nil,
+			}))
+		})
+
+		It("Is referenced by a StatefulSet", func() {
+
+			By("Creating the StatefulSet object")
+			Expect(k8sClient.Create(ctx, &sts)).Should(Succeed())
+
+			Eventually(func() bool {
+				sts := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, stsKey, sts)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			By("Checking for reference to be set in annotations")
+			Eventually(func() (string, error) {
+				sts := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, stsKey, sts)
+				if err != nil {
+					return "", err
+				}
+				return sts.ObjectMeta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference], nil
+			}, timeout, interval).Should(Equal("ir"))
+		})
+
+		It("It should not have idled the statefulset", func() {
+
+			By("Getting the StatefulSet")
+			sts := &appsv1.StatefulSet{}
+			Expect(k8sClient.Get(ctx, stsKey, sts)).Should(Succeed())
+
+			By("Checking that Replicas has not changed")
+			Expect(sts.Spec.Replicas).Should(Equal(deploy.Spec.Replicas))
+		})
+
+		It("Should idle the StatefulSet", func() {
+			By("Idling the statefulset")
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+
+			ir.Spec.Idle = true
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			By("Checking that Replicas == 0")
+			Eventually(func() (*int32, error) {
+				sts := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, stsKey, sts)
+				if err != nil {
+					return nil, err
+				}
+				return sts.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(0)))
+		})
+
+		It("Should wakeup the StatefulSet", func() {
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+
+			ir.Spec.Idle = false
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			// We'll need to wait until the controller has idled the StatefulSet
+			Eventually(func() (*int32, error) {
+				sts := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, stsKey, sts)
+				if err != nil {
+					return nil, err
+				}
+				return sts.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(1)))
+		})
+
+		It("Should wakeup the StatefulSet to previous replicas", func() {
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+
+			ir.Spec.Idle = false
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			sts := &appsv1.StatefulSet{}
+			Expect(k8sClient.Get(ctx, stsKey, sts)).Should(Succeed())
+
+			sts.Spec.Replicas = pointer.Int32(2)
+			Expect(k8sClient.Update(ctx, sts)).Should(Succeed())
+
+			Eventually(func() (*int32, error) {
+				sts := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, stsKey, sts)
+				if err != nil {
+					return nil, err
+				}
+				return sts.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(2)))
+
+			ir.Spec.Idle = true
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			// We'll need to wait until the controller has idled the StatefulSet
+			By("idling")
+			Eventually(func() (*int32, error) {
+				sts := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, stsKey, sts)
+				if err != nil {
+					return nil, err
+				}
+				return sts.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(0)))
+
+			ir.Spec.Idle = false
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			// We'll need to wait until the controller has waked up the StatefulSet
+			By("waking up")
+			Eventually(func() (*int32, error) {
+				sts := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, stsKey, sts)
+				if err != nil {
+					return nil, err
+				}
+				return sts.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(2)))
+		})
+
+		It("Should wakeup and cleanup Deployment when removing the IdlingResource", func() {
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+
+			By("deleting the IdlingResource")
+			Expect(k8sClient.Delete(ctx, ir)).Should(Succeed())
+
+			By("checking the StatefulSet has not been deleted")
+			sts := &appsv1.StatefulSet{}
+			Consistently(func() error {
+				err := k8sClient.Get(ctx, stsKey, sts)
+				if err != nil {
+					return err
+				}
+				return nil
+
+			}, 2*time.Second, interval).Should(Succeed())
+
+			By("checking the StatefulSet annotations have been removed")
+			Expect(k8s.HasAnnotation(&sts.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas)).ShouldNot(BeTrue())
+			Expect(k8s.HasAnnotation(&sts.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference)).ShouldNot(BeTrue())
+
+			By("checking the StatefulSet has been scaled up")
+			Expect(sts.Spec.Replicas).Should(Equal(pointer.Int32(2)))
 		})
 	})
 })

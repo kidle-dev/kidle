@@ -23,7 +23,6 @@ import (
 	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
 	"github.com/orphaner/kidle/pkg/controllers/idler"
 	"github.com/orphaner/kidle/pkg/utils/array"
-	"github.com/orphaner/kidle/pkg/utils/pointer"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -64,6 +63,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	log.V(1).Info("Starting reconcile loop")
 	defer log.V(1).Info("Finish reconcile loop")
 
+	// Retrieve IdlingResource instance
 	var instance kidlev1beta1.IdlingResource
 	err := r.Get(ctx, req.NamespacedName, &instance)
 
@@ -102,23 +102,17 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return r.ReconcileWithIdler(ctx, &instance, idler)
 
 	case "StatefulSet":
-		var st v1.StatefulSet
-		nn := types.NamespacedName{
-			Namespace: req.Namespace,
-			Name:      ref.Name,
-		}
-		if err := r.Get(ctx, nn, &st); err != nil {
-			log.Error(err, "unable to read StatefulSet")
-			return ctrl.Result{}, err
-		}
-		if instance.Spec.Idle && *st.Spec.Replicas > 0 {
-			st.Spec.Replicas = pointer.Int32(0)
-			if err := r.Update(ctx, &st); err != nil {
-				log.Error(err, "unable to downscale statefulset")
-				return ctrl.Result{}, err
+
+		var sts v1.StatefulSet
+		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.IdlingResourceRef.Name}, &sts); err != nil {
+			if errors.IsNotFound(err) {
+				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 			}
-			log.V(1).Info("statefulset idled", "name", ref.Name)
+			return ctrl.Result{}, fmt.Errorf("unable to read StatefulSet: %v", err)
 		}
+
+		idler := idler.NewStatefulSetIdler(r.Client, log, &sts)
+		return r.ReconcileWithIdler(ctx, &instance, idler)
 	}
 
 	return ctrl.Result{}, nil
@@ -126,7 +120,9 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, instance *kidlev1beta1.IdlingResource, idler idler.Idler) (ctrl.Result, error) {
 
-	// Add a reference on the deployment
+	ref := instance.Spec.IdlingResourceRef
+
+	// Add a reference on the object
 	err := idler.SetReference(ctx, instance.Name)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("error during adding annotation: %v", err)
@@ -135,21 +131,21 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 	// Deal with the idling resource deletion
 	if instance.IsBeingDeleted() {
 
-		// Wakeup deployment
+		// Wakeup object
 		replicas, err := idler.Wakeup(ctx)
 		if err != nil {
 			r.Event(instance,
 				corev1.EventTypeWarning,
-				"RestoringDeployment",
-				fmt.Sprintf("Failed to restore deployment %s: %s", instance.Spec.IdlingResourceRef.Name, err))
+				fmt.Sprintf("Restoring%s", ref.Kind),
+				fmt.Sprintf("Failed to restore %s %s: %s", ref.Kind, ref.Name, err))
 			return ctrl.Result{}, fmt.Errorf("error during restoring: %v", err)
 		}
 		r.Event(instance,
 			corev1.EventTypeNormal,
-			"RestoringDeployment",
+			fmt.Sprintf("Restoring%s", ref.Kind),
 			fmt.Sprintf("Restored to %d", *replicas))
 
-		// Remove deployment annotations
+		// Remove object annotations
 		if err := idler.RemoveAnnotations(ctx); err != nil {
 			r.Event(instance,
 				corev1.EventTypeWarning,
@@ -160,7 +156,7 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 		r.Event(instance,
 			corev1.EventTypeNormal,
 			"Deleted",
-			"Kidle annotations on deployment are deleted")
+			fmt.Sprintf("Kidle annotations on %s are deleted", ref.Kind))
 
 		// All is OK, remove the finalizer
 		if err := r.removeFinalizer(ctx, instance); err != nil {
@@ -177,35 +173,35 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 		return ctrl.Result{}, nil
 	}
 
-	// Wakeup deployment
+	// Wakeup object
 	if idler.NeedWakeup(instance) {
 		replicas, err := idler.Wakeup(ctx)
 		if err != nil {
 			r.Event(instance,
 				corev1.EventTypeWarning,
-				"ScalingDeployment",
-				fmt.Sprintf("Failed to wake up deployment %s: %s", instance.Spec.IdlingResourceRef.Name, err))
+				fmt.Sprintf("Scaling%s", ref.Kind),
+				fmt.Sprintf("Failed to wake up %s %s: %s", ref.Kind, ref.Name, err))
 			return ctrl.Result{}, fmt.Errorf("error during waking up: %v", err)
 		}
 		r.Event(instance,
 			corev1.EventTypeNormal,
-			"ScalingDeployment",
+			fmt.Sprintf("Scaling%s", ref.Kind),
 			fmt.Sprintf("Scaled to %d", *replicas))
 		return ctrl.Result{}, nil
 	}
 
-	// Idle Deployment
+	// Idle object
 	if idler.NeedIdle(instance) {
 		if err := idler.Idle(ctx); err != nil {
 			r.Event(instance,
 				corev1.EventTypeWarning,
-				"ScalingDeployment",
-				fmt.Sprintf("Failed to idle deployment %s: %s", instance.Spec.IdlingResourceRef.Name, err))
+				fmt.Sprintf("Scaling%s", ref.Kind),
+				fmt.Sprintf("Failed to idle %s %s: %s", ref.Kind, ref.Name, err))
 			return ctrl.Result{}, fmt.Errorf("error during idling: %v", err)
 		}
 		r.Event(instance,
 			corev1.EventTypeNormal,
-			"ScalingDeployment",
+			fmt.Sprintf("Scaling%s", ref.Kind),
 			fmt.Sprintf("Scaled to 0"))
 		return ctrl.Result{}, nil
 	}
@@ -258,13 +254,19 @@ func (r *IdlingResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&source.Kind{Type: &v1.Deployment{}},
 			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: handler.ToRequestsFunc(r.deploymentForIdlingResourceMapper),
+				ToRequests: handler.ToRequestsFunc(r.objectForIdlingResourceMapper),
+			},
+		).
+		Watches(
+			&source.Kind{Type: &v1.StatefulSet{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: handler.ToRequestsFunc(r.objectForIdlingResourceMapper),
 			},
 		).
 		Complete(r)
 }
 
-func (r *IdlingResourceReconciler) deploymentForIdlingResourceMapper(object handler.MapObject) []reconcile.Request {
+func (r *IdlingResourceReconciler) objectForIdlingResourceMapper(object handler.MapObject) []reconcile.Request {
 	ref, found := object.Meta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference]
 	if !found {
 		return nil
