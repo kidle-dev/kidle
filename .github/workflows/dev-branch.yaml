@@ -10,6 +10,14 @@ on:
       - v*
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    name: setup
+    steps:
+    - name: Install ginkgo
+      run:  make ginkgo
+      shell: bash
+
   build:
     runs-on: ubuntu-latest
     name: build
@@ -33,20 +41,12 @@ jobs:
       with:
         version: 2.3.1
 
-    - name: Run tests
-      run:  make test
+    - name: Run ginkgo tests
+      run:  make gtest
       shell: bash
 
     - name: Build code
       run:  make
-      shell: bash
-
-    - name: Install ginkgo
-      run:  make ginkgo
-      shell: bash
-
-    - name: Run ginkgo tests
-      run:  make gtest
       shell: bash
 
     - name: Login to DockerHub
