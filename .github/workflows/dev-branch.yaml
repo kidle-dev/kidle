@@ -55,6 +55,7 @@ jobs:
       shell: bash
 
     - name: Run ginkgo tests
+      continue-on-error: true
       run:  make gtest
       shell: bash
 
