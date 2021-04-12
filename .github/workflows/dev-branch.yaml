@@ -28,17 +28,21 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
+    - name: Run tests
+      run:  make test
+      shell: bash
+
     - name: Build code
       run:  make
       shell: bash
 
-    - name: Install ginkgo
-      run:  make ginkgo
-      shell: bash
-
-    - name: Run ginkgo tests
-      run:  make gtest
-      shell: bash
+#    - name: Install ginkgo
+#      run:  make ginkgo
+#      shell: bash
+#
+#    - name: Run ginkgo tests
+#      run:  make gtest
+#      shell: bash
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
