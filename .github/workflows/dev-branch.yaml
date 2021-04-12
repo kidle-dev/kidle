@@ -10,9 +10,9 @@ on:
       - v*
 
 jobs:
-  setup:
+  build:
     runs-on: ubuntu-latest
-    name: setup
+    name: build
     steps:
 
     - name: set repo name
@@ -48,7 +48,6 @@ jobs:
     - name: Login to DockerHub
       uses: docker/login-action@v1
       with:
-        registry: quay.io/${{ github.repository_owner }}
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
