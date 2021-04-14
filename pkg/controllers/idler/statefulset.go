@@ -7,6 +7,8 @@ import (
 	"github.com/orphaner/kidle/pkg/utils/k8s"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
 	v1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 )
@@ -36,10 +38,14 @@ func (i StatefulSetIdler) NeedWakeup(instance *kidlev1beta1.IdlingResource) bool
 }
 
 func (i StatefulSetIdler) Idle(ctx context.Context) error {
-	k8s.AddAnnotation(&i.StatefulSet.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas, strconv.Itoa(int(*i.StatefulSet.Spec.Replicas)))
 	if i.StatefulSet.Spec.Replicas != pointer.Int32(0) {
-		i.StatefulSet.Spec.Replicas = pointer.Int32(0)
-		if err := i.Update(ctx, i.StatefulSet); err != nil {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			i.Get(ctx, types.NamespacedName{Namespace: i.StatefulSet.Namespace, Name: i.StatefulSet.Name}, i.StatefulSet)
+			k8s.AddAnnotation(&i.StatefulSet.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas, strconv.Itoa(int(*i.StatefulSet.Spec.Replicas)))
+			i.StatefulSet.Spec.Replicas = pointer.Int32(0)
+			return i.Update(ctx, i.StatefulSet)
+		})
+		if err != nil {
 			i.Log.Error(err, "unable to downscale statefulset")
 			return err
 		}
@@ -48,7 +54,6 @@ func (i StatefulSetIdler) Idle(ctx context.Context) error {
 		i.Log.V(2).Info("statefulset already idled", "name", i.StatefulSet.Name)
 	}
 	return nil
-
 }
 
 func (i StatefulSetIdler) Wakeup(ctx context.Context) (*int32, error) {
@@ -61,9 +66,14 @@ func (i StatefulSetIdler) Wakeup(ctx context.Context) (*int32, error) {
 			previousReplicas = pointer.Int32(int32(v))
 		}
 	}
+
 	if i.StatefulSet.Spec.Replicas != previousReplicas {
-		i.StatefulSet.Spec.Replicas = previousReplicas
-		if err := i.Update(ctx, i.StatefulSet); err != nil {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			i.Get(ctx, types.NamespacedName{Namespace: i.StatefulSet.Namespace, Name: i.StatefulSet.Name}, i.StatefulSet)
+			i.StatefulSet.Spec.Replicas = previousReplicas
+			return i.Update(ctx, i.StatefulSet)
+		})
+		if err != nil {
 			i.Log.Error(err, "unable to wakeup statefulset")
 			return nil, err
 		}
@@ -72,5 +82,4 @@ func (i StatefulSetIdler) Wakeup(ctx context.Context) (*int32, error) {
 		i.Log.V(2).Info("statefulset already waked up", "name", i.StatefulSet.Name)
 	}
 	return previousReplicas, nil
-
 }

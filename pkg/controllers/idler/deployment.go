@@ -7,6 +7,8 @@ import (
 	"github.com/orphaner/kidle/pkg/utils/k8s"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
 	v1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 )
@@ -36,10 +38,14 @@ func (i *DeploymentIdler) NeedWakeup(instance *kidlev1beta1.IdlingResource) bool
 }
 
 func (i *DeploymentIdler) Idle(ctx context.Context) error {
-	k8s.AddAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas, strconv.Itoa(int(*i.Deployment.Spec.Replicas)))
 	if i.Deployment.Spec.Replicas != pointer.Int32(0) {
-		i.Deployment.Spec.Replicas = pointer.Int32(0)
-		if err := i.Update(ctx, i.Deployment); err != nil {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			i.Get(ctx, types.NamespacedName{Namespace: i.Deployment.Namespace, Name: i.Deployment.Name}, i.Deployment)
+			k8s.AddAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas, strconv.Itoa(int(*i.Deployment.Spec.Replicas)))
+			i.Deployment.Spec.Replicas = pointer.Int32(0)
+			return i.Update(ctx, i.Deployment)
+		})
+		if err != nil {
 			i.Log.Error(err, "unable to downscale deployment")
 			return err
 		}
@@ -60,9 +66,14 @@ func (i *DeploymentIdler) Wakeup(ctx context.Context) (*int32, error) {
 			previousReplicas = pointer.Int32(int32(v))
 		}
 	}
+
 	if i.Deployment.Spec.Replicas != previousReplicas {
-		i.Deployment.Spec.Replicas = previousReplicas
-		if err := i.Update(ctx, i.Deployment); err != nil {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			i.Get(ctx, types.NamespacedName{Namespace: i.Deployment.Namespace, Name: i.Deployment.Name}, i.Deployment)
+			i.Deployment.Spec.Replicas = previousReplicas
+			return i.Update(ctx, i.Deployment)
+		})
+		if err != nil {
 			i.Log.Error(err, "unable to wakeup deployment")
 			return nil, err
 		}
