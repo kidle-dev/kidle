@@ -89,6 +89,8 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		r.Event(&instance, corev1.EventTypeNormal, "Added", "Object finalizer is added")
 	}
 
+	r.ReconcileCronStrategies(ctx, &instance)
+
 	// Reconcile
 	ref := instance.Spec.IdlingResourceRef
 	switch ref.Kind {
@@ -151,6 +153,25 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, instance *kidlev1beta1.IdlingResource) (ctrl.Result, error) {
+	if !hasCronStrategy(instance) {
+		return ctrl.Result{}, nil
+	}
+
+	// Create dedicated RBAC for the instance
+	if err := r.createRBAC(ctx, instance); err != nil {
+		r.Event(instance, corev1.EventTypeWarning, "Adding RBAC", fmt.Sprintf("Failed to add RBAC: %s", err))
+		return reconcile.Result{}, fmt.Errorf("error when adding RBAC: %v", err)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func hasCronStrategy(instance *kidlev1beta1.IdlingResource) bool {
+	return (instance.Spec.IdlingStrategy != nil && instance.Spec.IdlingStrategy.CronStrategy != nil) ||
+		(instance.Spec.WakeupStrategy != nil && instance.Spec.WakeupStrategy.CronStrategy != nil)
 }
 
 func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, instance *kidlev1beta1.IdlingResource, idler idler.Idler) (ctrl.Result, error) {
