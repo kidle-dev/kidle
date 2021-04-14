@@ -29,15 +29,15 @@ func NewStatefulSetIdler(client client.Client, log logr.Logger, statefulSet *v1.
 	}
 }
 
-func (i StatefulSetIdler) NeedIdle(instance *kidlev1beta1.IdlingResource) bool {
+func (i *StatefulSetIdler) NeedIdle(instance *kidlev1beta1.IdlingResource) bool {
 	return instance.Spec.Idle && *i.StatefulSet.Spec.Replicas > 0
 }
 
-func (i StatefulSetIdler) NeedWakeup(instance *kidlev1beta1.IdlingResource) bool {
+func (i *StatefulSetIdler) NeedWakeup(instance *kidlev1beta1.IdlingResource) bool {
 	return !instance.Spec.Idle && *i.StatefulSet.Spec.Replicas == 0
 }
 
-func (i StatefulSetIdler) Idle(ctx context.Context) error {
+func (i *StatefulSetIdler) Idle(ctx context.Context) error {
 	if i.StatefulSet.Spec.Replicas != pointer.Int32(0) {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			i.Get(ctx, types.NamespacedName{Namespace: i.StatefulSet.Namespace, Name: i.StatefulSet.Name}, i.StatefulSet)
@@ -56,7 +56,7 @@ func (i StatefulSetIdler) Idle(ctx context.Context) error {
 	return nil
 }
 
-func (i StatefulSetIdler) Wakeup(ctx context.Context) (*int32, error) {
+func (i *StatefulSetIdler) Wakeup(ctx context.Context) (*int32, error) {
 	previousReplicas := pointer.Int32(1)
 
 	if metadataPreviousReplicas, found := k8s.GetAnnotation(&i.StatefulSet.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas); found {

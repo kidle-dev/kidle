@@ -24,6 +24,7 @@ import (
 	"github.com/orphaner/kidle/pkg/controllers/idler"
 	"github.com/orphaner/kidle/pkg/utils/array"
 	v1 "k8s.io/api/apps/v1"
+	"k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -113,6 +114,19 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 		idler := idler.NewStatefulSetIdler(r.Client, log, &sts)
 		return r.ReconcileWithIdler(ctx, &instance, idler)
+
+	case "CronJob":
+
+		var cronJob v1beta1.CronJob
+		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.IdlingResourceRef.Name}, &cronJob); err != nil {
+			if errors.IsNotFound(err) {
+				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("unable to read Cronjob: %v", err)
+		}
+
+		idler := idler.NewCronJobIdler(r.Client, log, &cronJob)
+		return r.ReconcileWithIdler(ctx, &instance, idler)
 	}
 
 	return ctrl.Result{}, nil
@@ -140,10 +154,18 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 				fmt.Sprintf("Failed to restore %s %s: %s", ref.Kind, ref.Name, err))
 			return ctrl.Result{}, fmt.Errorf("error during restoring: %v", err)
 		}
-		r.Event(instance,
-			corev1.EventTypeNormal,
-			fmt.Sprintf("Restoring%s", ref.Kind),
-			fmt.Sprintf("Restored to %d", *replicas))
+		// TODO ugly hack, needs to find better way to handle CronJob Suspend field
+		if replicas != nil {
+			r.Event(instance,
+				corev1.EventTypeNormal,
+				fmt.Sprintf("Scaling%s", ref.Kind),
+				fmt.Sprintf("Scaled to %d", *replicas))
+		} else {
+			r.Event(instance,
+				corev1.EventTypeNormal,
+				fmt.Sprintf("Scaling%s", ref.Kind),
+				fmt.Sprintf("WakedUp"))
+		}
 
 		// Remove object annotations
 		if err := idler.RemoveAnnotations(ctx); err != nil {
@@ -183,10 +205,18 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 				fmt.Sprintf("Failed to wake up %s %s: %s", ref.Kind, ref.Name, err))
 			return ctrl.Result{}, fmt.Errorf("error during waking up: %v", err)
 		}
-		r.Event(instance,
-			corev1.EventTypeNormal,
-			fmt.Sprintf("Scaling%s", ref.Kind),
-			fmt.Sprintf("Scaled to %d", *replicas))
+		// TODO ugly hack, needs to find better way to handle CronJob Suspend field
+		if replicas != nil {
+			r.Event(instance,
+				corev1.EventTypeNormal,
+				fmt.Sprintf("Scaling%s", ref.Kind),
+				fmt.Sprintf("Scaled to %d", *replicas))
+		} else {
+			r.Event(instance,
+				corev1.EventTypeNormal,
+				fmt.Sprintf("Scaling%s", ref.Kind),
+				fmt.Sprintf("WakedUp"))
+		}
 		return ctrl.Result{}, nil
 	}
 
