@@ -23,8 +23,8 @@ import (
 	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
 	"github.com/orphaner/kidle/pkg/controllers/idler"
 	"github.com/orphaner/kidle/pkg/utils/array"
-	v1 "k8s.io/api/apps/v1"
-	"k8s.io/api/batch/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -91,7 +91,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	switch ref.Kind {
 	case "Deployment":
 
-		var deploy v1.Deployment
+		var deploy appsv1.Deployment
 		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &deploy); err != nil {
 			if errors.IsNotFound(err) {
 				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
@@ -104,7 +104,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	case "StatefulSet":
 
-		var sts v1.StatefulSet
+		var sts appsv1.StatefulSet
 		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &sts); err != nil {
 			if errors.IsNotFound(err) {
 				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
@@ -117,7 +117,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	case "CronJob":
 
-		var cronJob v1beta1.CronJob
+		var cronJob batchv1beta1.CronJob
 		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &cronJob); err != nil {
 			if errors.IsNotFound(err) {
 				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
@@ -282,13 +282,13 @@ func (r *IdlingResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&kidlev1beta1.IdlingResource{}).
 		//Owns(&v1.Deployment{}).
 		Watches(
-			&source.Kind{Type: &v1.Deployment{}},
+			&source.Kind{Type: &appsv1.Deployment{}},
 			&handler.EnqueueRequestsFromMapFunc{
 				ToRequests: handler.ToRequestsFunc(r.objectForIdlingResourceMapper),
 			},
 		).
 		Watches(
-			&source.Kind{Type: &v1.StatefulSet{}},
+			&source.Kind{Type: &appsv1.StatefulSet{}},
 			&handler.EnqueueRequestsFromMapFunc{
 				ToRequests: handler.ToRequestsFunc(r.objectForIdlingResourceMapper),
 			},

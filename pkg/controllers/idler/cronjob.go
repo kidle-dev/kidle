@@ -5,7 +5,7 @@ import (
 	"github.com/go-logr/logr"
 	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
-	"k8s.io/api/batch/v1beta1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,11 +14,11 @@ import (
 type CronJobIdler struct {
 	client.Client
 	Log     logr.Logger
-	CronJob *v1beta1.CronJob
+	CronJob *batchv1beta1.CronJob
 	ObjectIdler
 }
 
-func NewCronJobIdler(client client.Client, log logr.Logger, cronjob *v1beta1.CronJob) *CronJobIdler {
+func NewCronJobIdler(client client.Client, log logr.Logger, cronjob *batchv1beta1.CronJob) *CronJobIdler {
 	return &CronJobIdler{
 		Client:      client,
 		Log:         log,

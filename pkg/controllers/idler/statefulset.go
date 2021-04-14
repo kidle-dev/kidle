@@ -6,7 +6,7 @@ import (
 	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
 	"github.com/orphaner/kidle/pkg/utils/k8s"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
-	v1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,11 +16,11 @@ import (
 type StatefulSetIdler struct {
 	client.Client
 	Log         logr.Logger
-	StatefulSet *v1.StatefulSet
+	StatefulSet *appsv1.StatefulSet
 	ObjectIdler
 }
 
-func NewStatefulSetIdler(client client.Client, log logr.Logger, statefulSet *v1.StatefulSet) *StatefulSetIdler {
+func NewStatefulSetIdler(client client.Client, log logr.Logger, statefulSet *appsv1.StatefulSet) *StatefulSetIdler {
 	return &StatefulSetIdler{
 		Client:      client,
 		Log:         log,

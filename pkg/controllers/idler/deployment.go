@@ -6,7 +6,7 @@ import (
 	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
 	"github.com/orphaner/kidle/pkg/utils/k8s"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
-	v1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,11 +16,11 @@ import (
 type DeploymentIdler struct {
 	client.Client
 	Log        logr.Logger
-	Deployment *v1.Deployment
+	Deployment *appsv1.Deployment
 	ObjectIdler
 }
 
-func NewDeploymentIdler(client client.Client, log logr.Logger, deployment *v1.Deployment) *DeploymentIdler {
+func NewDeploymentIdler(client client.Client, log logr.Logger, deployment *appsv1.Deployment) *DeploymentIdler {
 	return &DeploymentIdler{
 		Client:      client,
 		Log:         log,
