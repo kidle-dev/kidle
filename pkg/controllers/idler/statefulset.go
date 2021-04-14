@@ -42,6 +42,7 @@ func (i *StatefulSetIdler) Idle(ctx context.Context) error {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			i.Get(ctx, types.NamespacedName{Namespace: i.StatefulSet.Namespace, Name: i.StatefulSet.Name}, i.StatefulSet)
 			k8s.AddAnnotation(&i.StatefulSet.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas, strconv.Itoa(int(*i.StatefulSet.Spec.Replicas)))
+			k8s.AddAnnotation(&i.StatefulSet.ObjectMeta, kidlev1beta1.MetadataExpectedState, "0")
 			i.StatefulSet.Spec.Replicas = pointer.Int32(0)
 			return i.Update(ctx, i.StatefulSet)
 		})
@@ -70,6 +71,7 @@ func (i *StatefulSetIdler) Wakeup(ctx context.Context) (*int32, error) {
 	if i.StatefulSet.Spec.Replicas != previousReplicas {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			i.Get(ctx, types.NamespacedName{Namespace: i.StatefulSet.Namespace, Name: i.StatefulSet.Name}, i.StatefulSet)
+			k8s.AddAnnotation(&i.StatefulSet.ObjectMeta, kidlev1beta1.MetadataExpectedState, strconv.Itoa(int(*previousReplicas)))
 			i.StatefulSet.Spec.Replicas = previousReplicas
 			return i.Update(ctx, i.StatefulSet)
 		})

@@ -28,6 +28,9 @@ const MetadataIdlingResourceReference = "kidle.beroot.org/idling-resource-refere
 // TODO
 const MetadataPreviousReplicas = "kidle.beroot.org/previous-replicas"
 
+// TODO
+const MetadataExpectedState = "kidle.beroot.org/expected-state"
+
 // IdlingResourceSpec defines the desired state of IdlingResource
 type IdlingResourceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster

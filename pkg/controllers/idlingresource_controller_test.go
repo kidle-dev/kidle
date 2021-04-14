@@ -44,7 +44,7 @@ var _ = Describe("IdlingResource Controller", func() {
 	var (
 		ctx = context.Background()
 	)
-	Context("Initially", func() {
+	Context("Deployment suite", func() {
 		var deployKey = types.NamespacedName{Name: "nginx", Namespace: "ns"}
 		var deploy = appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
@@ -164,6 +164,25 @@ var _ = Describe("IdlingResource Controller", func() {
 			}, timeout, interval).Should(Equal(pointer.Int32(0)))
 		})
 
+		It("Should watch the Deployment", func() {
+			By("Trying to update replicas on a idled object")
+			d := &appsv1.Deployment{}
+			Expect(k8sClient.Get(ctx, deployKey, d)).Should(Succeed())
+
+			d.Spec.Replicas = pointer.Int32(1)
+			Expect(k8sClient.Update(ctx, d)).Should(Succeed())
+
+			By("Checking that Replicas still equals to 0")
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(0)))
+		})
+
 		It("Should wakeup the Deployment", func() {
 			ir := &kidlev1beta1.IdlingResource{}
 			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
@@ -254,13 +273,14 @@ var _ = Describe("IdlingResource Controller", func() {
 			By("checking the Deployment annotations have been removed")
 			Expect(k8s.HasAnnotation(&d.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas)).ShouldNot(BeTrue())
 			Expect(k8s.HasAnnotation(&d.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference)).ShouldNot(BeTrue())
+			Expect(k8s.HasAnnotation(&d.ObjectMeta, kidlev1beta1.MetadataExpectedState)).ShouldNot(BeTrue())
 
 			By("checking the Deployment has been scaled up")
 			Expect(d.Spec.Replicas).Should(Equal(pointer.Int32(2)))
 		})
 	})
 
-	Context("Initially", func() {
+	Context("StatefulSet suite", func() {
 		var stsKey = types.NamespacedName{Name: "nginx-sts", Namespace: "ns"}
 		var sts = appsv1.StatefulSet{
 			TypeMeta: metav1.TypeMeta{
@@ -380,6 +400,25 @@ var _ = Describe("IdlingResource Controller", func() {
 			}, timeout, interval).Should(Equal(pointer.Int32(0)))
 		})
 
+		It("Should watch the StatefulSet", func() {
+			By("Trying to update replicas on a idled object")
+			s := &appsv1.StatefulSet{}
+			Expect(k8sClient.Get(ctx, stsKey, s)).Should(Succeed())
+
+			s.Spec.Replicas = pointer.Int32(1)
+			Expect(k8sClient.Update(ctx, s)).Should(Succeed())
+
+			By("Checking that Replicas still equals to 0")
+			Eventually(func() (*int32, error) {
+				s := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, stsKey, s)
+				if err != nil {
+					return nil, err
+				}
+				return s.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(0)))
+		})
+
 		It("Should wakeup the StatefulSet", func() {
 			ir := &kidlev1beta1.IdlingResource{}
 			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
@@ -449,7 +488,7 @@ var _ = Describe("IdlingResource Controller", func() {
 			}, timeout, interval).Should(Equal(pointer.Int32(2)))
 		})
 
-		It("Should wakeup and cleanup Deployment when removing the IdlingResource", func() {
+		It("Should wakeup and cleanup StatefulSet when removing the IdlingResource", func() {
 			ir := &kidlev1beta1.IdlingResource{}
 			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
 
@@ -470,6 +509,7 @@ var _ = Describe("IdlingResource Controller", func() {
 			By("checking the StatefulSet annotations have been removed")
 			Expect(k8s.HasAnnotation(&sts.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas)).ShouldNot(BeTrue())
 			Expect(k8s.HasAnnotation(&sts.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference)).ShouldNot(BeTrue())
+			Expect(k8s.HasAnnotation(&sts.ObjectMeta, kidlev1beta1.MetadataExpectedState)).ShouldNot(BeTrue())
 
 			By("checking the StatefulSet has been scaled up")
 			Expect(sts.Spec.Replicas).Should(Equal(pointer.Int32(2)))
@@ -588,6 +628,25 @@ var _ = Describe("IdlingResource Controller", func() {
 			}, timeout, interval).Should(Equal(pointer.Bool(true)))
 		})
 
+		It("Should watch the CronJob", func() {
+			By("Trying to update suspend field on a idled object")
+			cj := &batchv1beta1.CronJob{}
+			Expect(k8sClient.Get(ctx, cronJobKey, cj)).Should(Succeed())
+
+			cj.Spec.Suspend = pointer.Bool(false)
+			Expect(k8sClient.Update(ctx, cj)).Should(Succeed())
+
+			// We'll need to wait until the controller has idled the CronJob
+			Eventually(func() (*bool, error) {
+				cj := &batchv1beta1.CronJob{}
+				err := k8sClient.Get(ctx, cronJobKey, cj)
+				if err != nil {
+					return nil, err
+				}
+				return cj.Spec.Suspend, nil
+			}, timeout, interval).Should(Equal(pointer.Bool(true)))
+		})
+
 		It("Should wakeup the CronJob", func() {
 			ir := &kidlev1beta1.IdlingResource{}
 			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
@@ -627,10 +686,10 @@ var _ = Describe("IdlingResource Controller", func() {
 			By("checking the CronJob annotations have been removed")
 			Expect(k8s.HasAnnotation(&cj.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas)).ShouldNot(BeTrue())
 			Expect(k8s.HasAnnotation(&cj.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference)).ShouldNot(BeTrue())
+			Expect(k8s.HasAnnotation(&cj.ObjectMeta, kidlev1beta1.MetadataExpectedState)).ShouldNot(BeTrue())
 
 			By("checking the CronJob has been scaled up")
 			Expect(cj.Spec.Suspend).Should(Equal(pointer.Bool(false)))
 		})
 	})
-
 })

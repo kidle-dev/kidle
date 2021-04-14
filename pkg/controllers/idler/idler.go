@@ -66,6 +66,7 @@ func (o *ObjectIdler) RemoveAnnotations(ctx context.Context) error {
 			o.Get(ctx, types.NamespacedName{Namespace: o.Object.GetNamespace(), Name: o.Object.GetName()}, o.RuntimeObject)
 			k8s.RemoveAnnotation(o.Object, kidlev1beta1.MetadataIdlingResourceReference)
 			k8s.RemoveAnnotation(o.Object, kidlev1beta1.MetadataPreviousReplicas)
+			k8s.RemoveAnnotation(o.Object, kidlev1beta1.MetadataExpectedState)
 			return o.Update(ctx, o.RuntimeObject)
 		})
 		if err != nil {

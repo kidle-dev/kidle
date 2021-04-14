@@ -33,9 +33,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strconv"
 	"time"
 )
 
@@ -298,7 +301,7 @@ func (r *IdlingResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kidlev1beta1.IdlingResource{}).
-		//Owns(&v1.Deployment{}).
+		WithEventFilter(&KidleChangedPredicate{}).
 		Watches(
 			&source.Kind{Type: &appsv1.Deployment{}},
 			&handler.EnqueueRequestsFromMapFunc{
@@ -307,6 +310,12 @@ func (r *IdlingResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		Watches(
 			&source.Kind{Type: &appsv1.StatefulSet{}},
+			&handler.EnqueueRequestsFromMapFunc{
+				ToRequests: handler.ToRequestsFunc(r.objectForIdlingResourceMapper),
+			},
+		).
+		Watches(
+			&source.Kind{Type: &batchv1beta1.CronJob{}},
 			&handler.EnqueueRequestsFromMapFunc{
 				ToRequests: handler.ToRequestsFunc(r.objectForIdlingResourceMapper),
 			},
@@ -325,4 +334,56 @@ func (r *IdlingResourceReconciler) objectForIdlingResourceMapper(object handler.
 	reqs[0].NamespacedName.Namespace = object.Meta.GetNamespace()
 	r.Log.Info("requesting reconciliation", "IdlingResource", reqs[0].NamespacedName)
 	return reqs
+}
+
+type KidleChangedPredicate struct {
+	predicate.Funcs
+}
+
+func (rl *KidleChangedPredicate) Update(e event.UpdateEvent) bool {
+	oldDeploy, ok1 := e.ObjectOld.(*appsv1.Deployment)
+	newDeploy, ok2 := e.ObjectNew.(*appsv1.Deployment)
+	if ok1 && ok2 {
+		if _, found := oldDeploy.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference]; !found {
+			return false
+		}
+
+		expected, found := newDeploy.GetAnnotations()[kidlev1beta1.MetadataExpectedState]
+		if found && strconv.Itoa(int(*newDeploy.Spec.Replicas)) != expected {
+			return true
+		} else {
+			return false
+		}
+	}
+
+	oldSts, ok1 := e.ObjectOld.(*appsv1.StatefulSet)
+	newSts, ok2 := e.ObjectNew.(*appsv1.StatefulSet)
+	if ok1 && ok2 {
+		if _, found := oldSts.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference]; !found {
+			return false
+		}
+
+		expected, found := newSts.GetAnnotations()[kidlev1beta1.MetadataExpectedState]
+		if found && strconv.Itoa(int(*newSts.Spec.Replicas)) != expected {
+			return true
+		} else {
+			return false
+		}
+	}
+
+	oldCj, ok1 := e.ObjectOld.(*batchv1beta1.CronJob)
+	newCj, ok2 := e.ObjectNew.(*batchv1beta1.CronJob)
+	if ok1 && ok2 {
+		if _, found := oldCj.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference]; !found {
+			return false
+		}
+
+		expected, found := newCj.GetAnnotations()[kidlev1beta1.MetadataExpectedState]
+		if found && strconv.FormatBool(*newCj.Spec.Suspend) != expected {
+			return true
+		} else {
+			return false
+		}
+	}
+	return true
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/go-logr/logr"
 	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
+	"github.com/orphaner/kidle/pkg/utils/k8s"
 	"github.com/orphaner/kidle/pkg/utils/pointer"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,6 +40,7 @@ func (i *CronJobIdler) Idle(ctx context.Context) error {
 	if *i.CronJob.Spec.Suspend == false {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			i.Get(ctx, types.NamespacedName{Namespace: i.CronJob.Namespace, Name: i.CronJob.Name}, i.CronJob)
+			k8s.AddAnnotation(&i.CronJob.ObjectMeta, kidlev1beta1.MetadataExpectedState, "true")
 			i.CronJob.Spec.Suspend = pointer.Bool(true)
 			return i.Update(ctx, i.CronJob)
 		})
@@ -57,6 +59,7 @@ func (i *CronJobIdler) Wakeup(ctx context.Context) (*int32, error) {
 	if *i.CronJob.Spec.Suspend {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			i.Get(ctx, types.NamespacedName{Namespace: i.CronJob.Namespace, Name: i.CronJob.Name}, i.CronJob)
+			k8s.AddAnnotation(&i.CronJob.ObjectMeta, kidlev1beta1.MetadataExpectedState, "false")
 			i.CronJob.Spec.Suspend = pointer.Bool(false)
 			return i.Update(ctx, i.CronJob)
 		})

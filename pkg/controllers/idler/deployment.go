@@ -42,6 +42,7 @@ func (i *DeploymentIdler) Idle(ctx context.Context) error {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			i.Get(ctx, types.NamespacedName{Namespace: i.Deployment.Namespace, Name: i.Deployment.Name}, i.Deployment)
 			k8s.AddAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas, strconv.Itoa(int(*i.Deployment.Spec.Replicas)))
+			k8s.AddAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataExpectedState, "0")
 			i.Deployment.Spec.Replicas = pointer.Int32(0)
 			return i.Update(ctx, i.Deployment)
 		})
@@ -70,6 +71,7 @@ func (i *DeploymentIdler) Wakeup(ctx context.Context) (*int32, error) {
 	if i.Deployment.Spec.Replicas != previousReplicas {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			i.Get(ctx, types.NamespacedName{Namespace: i.Deployment.Namespace, Name: i.Deployment.Name}, i.Deployment)
+			k8s.AddAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataExpectedState, strconv.Itoa(int(*previousReplicas)))
 			i.Deployment.Spec.Replicas = previousReplicas
 			return i.Update(ctx, i.Deployment)
 		})
