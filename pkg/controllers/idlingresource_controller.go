@@ -92,7 +92,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	case "Deployment":
 
 		var deploy v1.Deployment
-		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.IdlingResourceRef.Name}, &deploy); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &deploy); err != nil {
 			if errors.IsNotFound(err) {
 				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 			}
@@ -105,7 +105,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	case "StatefulSet":
 
 		var sts v1.StatefulSet
-		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.IdlingResourceRef.Name}, &sts); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &sts); err != nil {
 			if errors.IsNotFound(err) {
 				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 			}
@@ -118,7 +118,7 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	case "CronJob":
 
 		var cronJob v1beta1.CronJob
-		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.IdlingResourceRef.Name}, &cronJob); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &cronJob); err != nil {
 			if errors.IsNotFound(err) {
 				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 			}
