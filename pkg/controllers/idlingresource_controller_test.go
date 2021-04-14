@@ -16,8 +16,6 @@ import (
 	"time"
 )
 
-
-
 var irKey = types.NamespacedName{Name: "ir", Namespace: "ns"}
 
 func newIdlingResource(ref *kidlev1beta1.CrossVersionObjectReference) *kidlev1beta1.IdlingResource {
@@ -496,9 +494,9 @@ var _ = Describe("IdlingResource Controller", func() {
 					Spec: batchv1.JobSpec{
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{},
-							Spec:       corev1.PodSpec{
+							Spec: corev1.PodSpec{
 								RestartPolicy: corev1.RestartPolicyNever,
-								Containers:[]corev1.Container{
+								Containers: []corev1.Container{
 									{
 										Name:  "nginx",
 										Image: "nginx",
