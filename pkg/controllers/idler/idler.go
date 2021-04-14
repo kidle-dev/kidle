@@ -8,6 +8,8 @@ import (
 	"github.com/orphaner/kidle/pkg/utils/k8s"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -42,8 +44,12 @@ func (o *ObjectIdler) SetReference(ctx context.Context, instanceName string) err
 	if !k8s.HasAnnotation(o.Object, kidlev1beta1.MetadataIdlingResourceReference) {
 		o.Log.Info(fmt.Sprintf("Set reference for object %v", o.Object.GetName()))
 
-		k8s.AddAnnotation(o.Object, kidlev1beta1.MetadataIdlingResourceReference, instanceName)
-		if err := o.Update(ctx, o.RuntimeObject); err != nil {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			o.Get(ctx, types.NamespacedName{Namespace: o.Object.GetNamespace(), Name: o.Object.GetName()}, o.RuntimeObject)
+			k8s.AddAnnotation(o.Object, kidlev1beta1.MetadataIdlingResourceReference, instanceName)
+			return o.Update(ctx, o.RuntimeObject)
+		})
+		if err != nil {
 			o.Log.Error(err, "unable to add reference in annotations")
 			return err
 		}
@@ -56,9 +62,13 @@ func (o *ObjectIdler) RemoveAnnotations(ctx context.Context) error {
 		k8s.HasAnnotation(o.Object, kidlev1beta1.MetadataPreviousReplicas) {
 		o.Log.Info(fmt.Sprintf("Remove annotations for object %v", o.Object.GetName()))
 
-		k8s.RemoveAnnotation(o.Object, kidlev1beta1.MetadataIdlingResourceReference)
-		k8s.RemoveAnnotation(o.Object, kidlev1beta1.MetadataPreviousReplicas)
-		if err := o.Update(ctx, o.RuntimeObject); err != nil {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			o.Get(ctx, types.NamespacedName{Namespace: o.Object.GetNamespace(), Name: o.Object.GetName()}, o.RuntimeObject)
+			k8s.RemoveAnnotation(o.Object, kidlev1beta1.MetadataIdlingResourceReference)
+			k8s.RemoveAnnotation(o.Object, kidlev1beta1.MetadataPreviousReplicas)
+			return o.Update(ctx, o.RuntimeObject)
+		})
+		if err != nil {
 			o.Log.Error(err, "unable to remove kidle annotations")
 			return err
 		}
