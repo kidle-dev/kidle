@@ -287,7 +287,7 @@ var _ = Describe("IdlingResource Controller", func() {
 				}
 				return nil
 
-			}, timeout, interval).Should(Succeed())
+			}, 5*time.Second, interval).Should(Succeed())
 
 			By("checking the Deployment annotations have been removed")
 			Expect(k8s.HasAnnotation(&d.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas)).ShouldNot(BeTrue())
@@ -463,7 +463,7 @@ var _ = Describe("IdlingResource Controller", func() {
 				}
 				return nil
 
-			}, timeout, interval).Should(Succeed())
+			}, 5*time.Second, interval).Should(Succeed())
 
 			By("checking the StatefulSet annotations have been removed")
 			Expect(k8s.HasAnnotation(&sts.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas)).ShouldNot(BeTrue())
