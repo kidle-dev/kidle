@@ -94,6 +94,12 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		var deploy appsv1.Deployment
 		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &deploy); err != nil {
 			if errors.IsNotFound(err) {
+				if instance.IsBeingDeleted() {
+					if err := r.removeFinalizer(ctx, &instance); err != nil {
+						return ctrl.Result{}, fmt.Errorf("error when deleting finalizer: %v", err)
+					}
+					return ctrl.Result{}, nil
+				}
 				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("unable to read Deployment: %v", err)
@@ -107,6 +113,12 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		var sts appsv1.StatefulSet
 		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &sts); err != nil {
 			if errors.IsNotFound(err) {
+				if instance.IsBeingDeleted() {
+					if err := r.removeFinalizer(ctx, &instance); err != nil {
+						return ctrl.Result{}, fmt.Errorf("error when deleting finalizer: %v", err)
+					}
+					return ctrl.Result{}, nil
+				}
 				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("unable to read StatefulSet: %v", err)
@@ -120,6 +132,12 @@ func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		var cronJob batchv1beta1.CronJob
 		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &cronJob); err != nil {
 			if errors.IsNotFound(err) {
+				if instance.IsBeingDeleted() {
+					if err := r.removeFinalizer(ctx, &instance); err != nil {
+						return ctrl.Result{}, fmt.Errorf("error when deleting finalizer: %v", err)
+					}
+					return ctrl.Result{}, nil
+				}
 				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("unable to read Cronjob: %v", err)
