@@ -18,7 +18,11 @@ package main
 
 import (
 	"flag"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/scale"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -66,11 +70,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	restMapper, err := apiutil.NewDynamicRESTMapper(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "create dynamic rest mapper failed")
+		os.Exit(1)
+	}
+
+	managementDiscoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "create discovery client failed")
+		os.Exit(1)
+	}
+
+	scaleClient, err := scale.NewForConfig(mgr.GetConfig(), restMapper, dynamic.LegacyAPIPathResolverFunc, scale.NewDiscoveryScaleKindResolver(managementDiscoveryClient))
+	if err != nil {
+		setupLog.Error(err, "create scale client failed")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.IdlingResourceReconciler{
 		Client:        mgr.GetClient(),
 		Log:           ctrl.Log.WithName("controllers").WithName("IdlingResource"),
 		Scheme:        mgr.GetScheme(),
 		EventRecorder: mgr.GetEventRecorderFor("idlingresource-controller"),
+		ScaleClient:   scaleClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IdlingResource")
 		os.Exit(1)
