@@ -7,7 +7,6 @@ import (
 	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
 	"github.com/orphaner/kidle/pkg/utils/k8s"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,15 +27,15 @@ type ObjectIdler struct {
 	client.Client
 	Log           logr.Logger
 	Object        metav1.Object
-	RuntimeObject runtime.Object
+	RuntimeObject client.Object
 }
 
-func NewObjectIdler(client client.Client, log logr.Logger, o interface{}) ObjectIdler {
+func NewObjectIdler(k8sClient client.Client, log logr.Logger, o interface{}) ObjectIdler {
 	return ObjectIdler{
-		Client:        client,
+		Client:        k8sClient,
 		Log:           log,
 		Object:        o.(metav1.Object),
-		RuntimeObject: o.(runtime.Object),
+		RuntimeObject: o.(client.Object),
 	}
 }
 

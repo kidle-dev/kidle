@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-var irKey = types.NamespacedName{Name: "ir", Namespace: "ns"}
+var irKey = types.NamespacedName{Name: "ir", Namespace: "default"}
 
 func newIdlingResource(ref *kidlev1beta1.CrossVersionObjectReference) *kidlev1beta1.IdlingResource {
 	return &kidlev1beta1.IdlingResource{
@@ -45,7 +45,7 @@ var _ = Describe("IdlingResource Controller", func() {
 		ctx = context.Background()
 	)
 	Context("Deployment suite", func() {
-		var deployKey = types.NamespacedName{Name: "nginx", Namespace: "ns"}
+		var deployKey = types.NamespacedName{Name: "nginx", Namespace: "default"}
 		var deploy = appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Deployment",
@@ -68,7 +68,7 @@ var _ = Describe("IdlingResource Controller", func() {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "nginx",
-						Namespace: "ns",
+						Namespace: "default",
 						Labels: map[string]string{
 							"app": "nginx",
 						},
@@ -281,7 +281,7 @@ var _ = Describe("IdlingResource Controller", func() {
 	})
 
 	Context("StatefulSet suite", func() {
-		var stsKey = types.NamespacedName{Name: "nginx-sts", Namespace: "ns"}
+		var stsKey = types.NamespacedName{Name: "nginx-sts", Namespace: "default"}
 		var sts = appsv1.StatefulSet{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "StatefulSet",
@@ -304,7 +304,7 @@ var _ = Describe("IdlingResource Controller", func() {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "nginx",
-						Namespace: "ns",
+						Namespace: "default",
 						Labels: map[string]string{
 							"app": "nginx-sts",
 						},
@@ -517,7 +517,7 @@ var _ = Describe("IdlingResource Controller", func() {
 	})
 
 	Context("CronJob suite", func() {
-		var cronJobKey = types.NamespacedName{Name: "hello-world", Namespace: "ns"}
+		var cronJobKey = types.NamespacedName{Name: "hello-world", Namespace: "default"}
 		var cronJob = batchv1beta1.CronJob{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "CronJob",

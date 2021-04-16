@@ -60,8 +60,7 @@ type IdlingResourceReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get
 
-func (r *IdlingResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *IdlingResourceReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.Log.WithValues("idlingresource", req.NamespacedName)
 
 	log.V(1).Info("Starting reconcile loop")
@@ -325,34 +324,28 @@ func (r *IdlingResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithEventFilter(&KidleChangedPredicate{}).
 		Watches(
 			&source.Kind{Type: &appsv1.Deployment{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: handler.ToRequestsFunc(r.objectForIdlingResourceMapper),
-			},
+			handler.EnqueueRequestsFromMapFunc(r.objectForIdlingResourceMapper),
 		).
 		Watches(
 			&source.Kind{Type: &appsv1.StatefulSet{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: handler.ToRequestsFunc(r.objectForIdlingResourceMapper),
-			},
+			handler.EnqueueRequestsFromMapFunc(r.objectForIdlingResourceMapper),
 		).
 		Watches(
 			&source.Kind{Type: &batchv1beta1.CronJob{}},
-			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: handler.ToRequestsFunc(r.objectForIdlingResourceMapper),
-			},
+			handler.EnqueueRequestsFromMapFunc(r.objectForIdlingResourceMapper),
 		).
 		Complete(r)
 }
 
-func (r *IdlingResourceReconciler) objectForIdlingResourceMapper(object handler.MapObject) []reconcile.Request {
-	ref, found := object.Meta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference]
+func (r *IdlingResourceReconciler) objectForIdlingResourceMapper(object client.Object) []reconcile.Request {
+	ref, found := object.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference]
 	if !found {
 		return nil
 	}
 
 	reqs := make([]reconcile.Request, 1)
 	reqs[0].NamespacedName.Name = ref
-	reqs[0].NamespacedName.Namespace = object.Meta.GetNamespace()
+	reqs[0].NamespacedName.Namespace = object.GetNamespace()
 	r.Log.Info("requesting reconciliation", "IdlingResource", reqs[0].NamespacedName)
 	return reqs
 }
