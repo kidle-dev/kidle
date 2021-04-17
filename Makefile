@@ -142,6 +142,9 @@ k3s-start:
 k3s-stop:
 	k3d cluster stop kidle
 
+# Restarts k3s server
+k3s-restart: k3s-stop k3s-start
+
 # Write kubeconfig file
 k3s-kubeconfig:
 	k3d kubeconfig get kidle > kube.config
