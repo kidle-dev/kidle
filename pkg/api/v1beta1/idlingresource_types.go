@@ -19,17 +19,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// IdlingResourceFinalizerName is the name of the idlingresource finalizer
-const IdlingResourceFinalizerName = "idlingresource.finalizers.kidle.beroot.org"
+const (
+	IdlingResources = "idlingresources"
 
-// TODO
-const MetadataIdlingResourceReference = "kidle.beroot.org/idling-resource-reference"
+	// IdlingResourceFinalizerName is the name of the idlingresource finalizer
+	IdlingResourceFinalizerName = "idlingresource.finalizers.kidle.beroot.org"
 
-// TODO
-const MetadataPreviousReplicas = "kidle.beroot.org/previous-replicas"
+	// TODO
+	MetadataIdlingResourceReference = "kidle.beroot.org/idling-resource-reference"
 
-// TODO
-const MetadataExpectedState = "kidle.beroot.org/expected-state"
+	// TODO
+	MetadataPreviousReplicas = "kidle.beroot.org/previous-replicas"
+
+	// TODO
+	MetadataExpectedState = "kidle.beroot.org/expected-state"
+)
 
 // IdlingResourceSpec defines the desired state of IdlingResource
 type IdlingResourceSpec struct {
