@@ -31,6 +31,7 @@ func NewKidleClient(kubeconfig string) (*KidleClient, error) {
 		return nil, fmt.Errorf("error when creating restConfig: %v", err)
 	}
 
+	// Create a client with kidle scheme registered
 	kidlev1beta1.AddToScheme(scheme.Scheme)
 	client, err := client.New(restConfig, client.Options{})
 	return &KidleClient{Client: client}, nil

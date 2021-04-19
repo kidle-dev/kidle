@@ -17,18 +17,18 @@ type options struct {
 
 // idleCommandOptions are the options of the idle command
 type idleCommandOptions struct {
-	PosArgs   positionalArgs `positional-args:"yes"`
-	Namespace string         `long:"namespace" env:"NAMESPACE" required:"1" short:"n" description:"IdlingResource namespace"`
+	Args struct {
+		Name string `long:"name" env:"NAME" description:"idling resource name to idle"`
+	} `positional-args:"yes" required:"1"`
+	Namespace string `long:"namespace" env:"NAMESPACE" required:"1" short:"n" description:"IdlingResource namespace"`
 }
 
 // wakeupCommandOptions are the options of the wakeup command
 type wakeupCommandOptions struct {
-	PosArgs   positionalArgs `positional-args:"yes"`
-	Namespace string         `long:"namespace" env:"NAMESPACE" required:"1" short:"n" description:"IdlingResource namespace"`
-}
-
-type positionalArgs struct {
-	Name string `long:"name" env:"NAME" required:"1" description:"idling resource name"`
+	Args struct {
+		Name string `long:"name" env:"NAME" description:"idling resource name to wakeup"`
+	} `positional-args:"yes" required:"1"`
+	Namespace string `long:"namespace" env:"NAMESPACE" required:"1" short:"n" description:"IdlingResource namespace"`
 }
 
 func main() {
@@ -57,43 +57,39 @@ func main() {
 	// execute active command
 	switch p.Active.Name {
 	case "idle":
-		logf.Log.V(0).Info("idling", "namespace", opts.IdleCmd.Namespace, "name", opts.IdleCmd.PosArgs.Name)
+		logf.Log.V(0).Info("idling", "namespace", opts.IdleCmd.Namespace, "name", opts.IdleCmd.Args.Name)
 
-		req := &types.NamespacedName{
+		done, err := kidle.applyDesiredIdleState(true, &types.NamespacedName{
 			Namespace: opts.IdleCmd.Namespace,
-			Name:      opts.IdleCmd.PosArgs.Name,
-		}
-
-		done, err := kidle.applyDesiredIdleState(true, req)
+			Name:      opts.IdleCmd.Args.Name,
+		})
 		if err != nil {
 			logf.Log.Error(err, "unable to idle")
 			os.Exit(3)
 		}
 
 		if done {
-			logf.Log.V(0).Info("scaled to 0", "namespace", opts.IdleCmd.Namespace, "name", opts.IdleCmd.PosArgs.Name)
+			logf.Log.V(0).Info("scaled to 0", "namespace", opts.IdleCmd.Namespace, "name", opts.IdleCmd.Args.Name)
 		} else {
-			logf.Log.V(0).Info("already idled", "namespace", opts.IdleCmd.Namespace, "name", opts.IdleCmd.PosArgs.Name)
+			logf.Log.V(0).Info("already idled", "namespace", opts.IdleCmd.Namespace, "name", opts.IdleCmd.Args.Name)
 		}
 
 	case "wakeup":
-		logf.Log.V(0).Info("waking up", "namespace", opts.WakeUpCmd.Namespace, "name", opts.WakeUpCmd.PosArgs.Name)
+		logf.Log.V(0).Info("waking up", "namespace", opts.WakeUpCmd.Namespace, "name", opts.WakeUpCmd.Args.Name)
 
-		req := &types.NamespacedName{
+		done, err := kidle.applyDesiredIdleState(false, &types.NamespacedName{
 			Namespace: opts.WakeUpCmd.Namespace,
-			Name:      opts.WakeUpCmd.PosArgs.Name,
-		}
-
-		done, err := kidle.applyDesiredIdleState(false, req)
+			Name:      opts.WakeUpCmd.Args.Name,
+		})
 		if err != nil {
 			logf.Log.Error(err, "unable to wake up")
 			os.Exit(3)
 		}
 
 		if done {
-			logf.Log.V(0).Info("waked up", "namespace", opts.WakeUpCmd.Namespace, "name", opts.WakeUpCmd.PosArgs.Name)
+			logf.Log.V(0).Info("waked up", "namespace", opts.WakeUpCmd.Namespace, "name", opts.WakeUpCmd.Args.Name)
 		} else {
-			logf.Log.V(0).Info("already waked up", "namespace", opts.WakeUpCmd.Namespace, "name", opts.WakeUpCmd.PosArgs.Name)
+			logf.Log.V(0).Info("already waked up", "namespace", opts.WakeUpCmd.Namespace, "name", opts.WakeUpCmd.Args.Name)
 		}
 	}
 }
