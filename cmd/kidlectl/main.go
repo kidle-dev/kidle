@@ -84,7 +84,7 @@ func main() {
 			Name:      opts.WakeUpCmd.PosArgs.Name,
 		}
 
-		done, err := kidle.applyDesiredIdleState(true, req)
+		done, err := kidle.applyDesiredIdleState(false, req)
 		if err != nil {
 			logf.Log.Error(err, "unable to wake up")
 			os.Exit(3)
