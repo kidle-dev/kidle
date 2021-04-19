@@ -13,6 +13,9 @@ jobs:
   build-controller:
     runs-on: ubuntu-latest
     name: build-controller
+    defaults:
+      run:
+        working-directory: ./cmd/controller
     steps:
 
     - name: set repo name
@@ -86,6 +89,9 @@ jobs:
   build-kidlectl:
     runs-on: ubuntu-latest
     name: build-kidlectl
+    defaults:
+      run:
+        working-directory: ./cmd/kidkectl
     steps:
 
     - name: set repo name
