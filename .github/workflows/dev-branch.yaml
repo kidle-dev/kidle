@@ -13,9 +13,6 @@ jobs:
   build-controller:
     runs-on: ubuntu-latest
     name: build-controller
-    defaults:
-      run:
-        working-directory: ./cmd/controller
     steps:
 
     - name: set repo name
@@ -61,10 +58,12 @@ jobs:
       continue-on-error: true
       run:  make gtest
       shell: bash
+      working-directory: ./cmd/controller
 
     - name: Build code
       run:  make
       shell: bash
+      working-directory: ./cmd/controller
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
@@ -82,16 +81,13 @@ jobs:
       uses: docker/build-push-action@v2
       with:
         context: .
-        file: ./Dockerfile
+        file: ./cmd/controller/Dockerfile
         push: true
         tags: "kidle/kidle-operator:latest"
 
   build-kidlectl:
     runs-on: ubuntu-latest
     name: build-kidlectl
-    defaults:
-      run:
-        working-directory: ./cmd/kidkectl
     steps:
 
     - name: set repo name
@@ -127,6 +123,7 @@ jobs:
     - name: Build code
       run:  make
       shell: bash
+      working-directory: ./cmd/kidkectl
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
@@ -144,6 +141,6 @@ jobs:
       uses: docker/build-push-action@v2
       with:
         context: .
-        file: ./Dockerfile
+        file: ./cmd/kidlectl/Dockerfile
         push: true
         tags: "kidle/kidle-operator:latest"
