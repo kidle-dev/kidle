@@ -144,4 +144,4 @@ jobs:
         context: .
         file: ./cmd/kidlectl/Dockerfile
         push: true
-        tags: "kidle/kidle-operator:latest"
+        tags: "kidle/kidlectl:latest"
