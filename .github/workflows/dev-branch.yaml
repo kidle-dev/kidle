@@ -53,6 +53,7 @@ jobs:
     - name: Install ginkgo
       run:  make ginkgo
       shell: bash
+      working-directory: ./cmd/controller
 
     - name: Run ginkgo tests
       continue-on-error: true
@@ -123,7 +124,7 @@ jobs:
     - name: Build code
       run:  make
       shell: bash
-      working-directory: ./cmd/kidkectl
+      working-directory: ./cmd/kidlectl
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
