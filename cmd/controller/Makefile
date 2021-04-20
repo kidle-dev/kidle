@@ -19,7 +19,7 @@ test: generate fmt vet manifests
 
 # Run ginkgo tests
 gtest: ginkgo
-	ginkgo -r -v
+	ginkgo -r -v ../../pkg
 
 # Build manager binary
 manager: generate fmt vet
