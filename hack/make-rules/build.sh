@@ -4,8 +4,7 @@ target=$1
 WHAT=$2
 shift 2
 
-IFS=",
-"
+IFS=","
 
 for w in $WHAT
 do
@@ -13,7 +12,9 @@ do
   then
     echo "cmd/$w does not exists"
   else
-    cd cmd/$w
-    make $target $@
+    (
+      cd cmd/$w
+      make $target $@
+    )
   fi
 done
