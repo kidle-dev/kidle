@@ -33,6 +33,7 @@ jobs:
         # * Build cache (Windows)
         path: |
           ~/go/pkg/mod
+          ~/go/bin
           ~/.cache/go-build
           ~/Library/Caches/go-build
           %LocalAppData%\go-build
@@ -106,6 +107,7 @@ jobs:
         # * Build cache (Windows)
         path: |
           ~/go/pkg/mod
+          ~/go/bin
           ~/.cache/go-build
           ~/Library/Caches/go-build
           %LocalAppData%\go-build
