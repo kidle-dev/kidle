@@ -36,9 +36,13 @@ jobs:
           ~/.cache/go-build
           ~/Library/Caches/go-build
           %LocalAppData%\go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+
+    - uses: satackey/action-docker-layer-caching@v0.0.11
+      # Ignore the failure of a step and avoid terminating the job.
+      continue-on-error: true
 
     - name: Install kubebuilder
       uses: RyanSiu1995/kubebuilder-action@v1.1
@@ -105,9 +109,13 @@ jobs:
           ~/.cache/go-build
           ~/Library/Caches/go-build
           %LocalAppData%\go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-${{ hashFiles('cmd/kidlectl/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+
+    - uses: satackey/action-docker-layer-caching@v0.0.11
+      # Ignore the failure of a step and avoid terminating the job.
+      continue-on-error: true
 
     - name: Build code
       run: make WHAT=kidlectl
