@@ -10,9 +10,9 @@ on:
       - v*
 
 jobs:
-  build-controller:
+  build-operator:
     runs-on: ubuntu-latest
-    name: build-controller
+    name: build-operator
     steps:
 
     - name: Set up Go 1.x
