@@ -6,7 +6,7 @@ shift 2
 
 IFS=",
 "
-env
+
 for w in $WHAT
 do
   if  [[ ! -d cmd/$w ]]

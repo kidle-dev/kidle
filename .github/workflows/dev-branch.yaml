@@ -15,11 +15,6 @@ jobs:
     name: build-controller
     steps:
 
-    - name: set repo name
-      shell: bash
-      run: |
-        echo "REPOSITORY_NAME=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
-
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
@@ -88,11 +83,6 @@ jobs:
     runs-on: ubuntu-latest
     name: build-kidlectl
     steps:
-
-    - name: set repo name
-      shell: bash
-      run: |
-        echo "REPOSITORY_NAME=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
 
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
