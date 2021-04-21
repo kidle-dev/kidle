@@ -1,15 +1,33 @@
 
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+WHAT ?= controller,kidlectl
 
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
+
+all:
+	hack/make-rules/build.sh all $(WHAT)
+
+run:
+	hack/make-rules/build.sh run $(WHAT)
+
+test:
+	hack/make-rules/build.sh test $(WHAT)
+
+gtest:
+	hack/make-rules/build.sh gtest $(WHAT)
+
+build:
+	hack/make-rules/build.sh build $(WHAT)
+
+docker:
+	hack/make-rules/build.sh docker $(WHAT)
+
+d:
+	hack/make-rules/build.sh d $(WHAT)
+
+docker-build:
+	hack/make-rules/build.sh docker-build $(WHAT)
+
+docker-push:
+	hack/make-rules/build.sh docker-push $(WHAT)
 
 # Install CRDs into a cluster
 install: manifests
@@ -21,7 +39,7 @@ uninstall: manifests
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests
-	cd config/manager && kustomize edit set image controller=${IMG}
+	cd config/manager && kustomize edit set image controller=${IMG_CONTROLLER}
 	kustomize build config/default | kubectl apply -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config

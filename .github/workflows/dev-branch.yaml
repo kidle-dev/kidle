@@ -51,20 +51,18 @@ jobs:
         version: 2.3.1
 
     - name: Install ginkgo
-      run:  make ginkgo
+      run: make ginkgo
       shell: bash
       working-directory: ./cmd/controller
 
     - name: Run ginkgo tests
       continue-on-error: true
-      run:  make gtest
+      run: make WHAT=controller gtest
       shell: bash
-      working-directory: ./cmd/controller
 
     - name: Build code
-      run:  make
+      run: make WHAT=controller
       shell: bash
-      working-directory: ./cmd/controller
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
@@ -122,9 +120,8 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Build code
-      run:  make
+      run: make WHAT=kidlectl
       shell: bash
-      working-directory: ./cmd/kidlectl
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
@@ -143,5 +140,5 @@ jobs:
       with:
         context: .
         file: ./cmd/kidlectl/Dockerfile
-        push: true
+        push: false
         tags: "kidle/kidlectl:latest"
