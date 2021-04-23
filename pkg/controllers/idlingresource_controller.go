@@ -141,20 +141,6 @@ func (r *IdlingResourceReconciler) reconcileResourceNotFound(ctx context.Context
 	return ctrl.Result{}, fmt.Errorf("unable to read %s: %v", instance.Spec.IdlingResourceRef.Kind, err)
 }
 
-func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, instance *kidlev1beta1.IdlingResource) (ctrl.Result, error) {
-	if !hasCronStrategy(instance) {
-		return ctrl.Result{}, nil
-	}
-
-	// Create dedicated RBAC for the instance
-	if err := r.createRBAC(ctx, instance); err != nil {
-		r.Event(instance, corev1.EventTypeWarning, "Adding RBAC", fmt.Sprintf("Failed to add RBAC: %s", err))
-		return reconcile.Result{}, fmt.Errorf("error when adding RBAC: %v", err)
-	}
-
-	return ctrl.Result{}, nil
-}
-
 func hasCronStrategy(instance *kidlev1beta1.IdlingResource) bool {
 	return (instance.Spec.IdlingStrategy != nil && instance.Spec.IdlingStrategy.CronStrategy != nil) ||
 		(instance.Spec.WakeupStrategy != nil && instance.Spec.WakeupStrategy.CronStrategy != nil)
