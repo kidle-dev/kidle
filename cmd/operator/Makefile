@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG_CONTROLLER ?= kidle-controller:latest
+IMG_OPERATOR ?= kidle-operator:latest
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
@@ -22,9 +22,9 @@ test: generate fmt vet manifests
 gtest: ginkgo
 	ginkgo -r -v ../../pkg
 
-# Build manager binary
+# Build operator binary
 build: generate fmt vet
-	go build -o bin/manager main.go
+	go build -o bin/operator main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
@@ -52,11 +52,11 @@ d: docker
 
 # Build the docker image
 docker-build: test
-	cd ../../; docker build . -t ${IMG_CONTROLLER} -f cmd/controller/Dockerfile
+	cd ../../; docker build . -t ${IMG_OPERATOR} -f cmd/operator/Dockerfile
 
 # Push the docker image
 docker-push:
-	docker push ${IMG_CONTROLLER}
+	docker push ${IMG_OPERATOR}
 
 # Build and push the docker debug image
 docker-debug: docker-debug-build docker-debug-push

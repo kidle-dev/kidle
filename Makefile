@@ -1,5 +1,5 @@
 
-WHAT ?= controller,kidlectl
+WHAT ?= operator,kidlectl
 
 
 all:
@@ -39,7 +39,7 @@ uninstall: manifests
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests
-	cd config/manager && kustomize edit set image controller=${IMG_CONTROLLER}
+	cd config/manager && kustomize edit set image controller=${IMG_OPERATOR}
 	kustomize build config/default | kubectl apply -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
