@@ -92,21 +92,13 @@ func (r *IdlingResourceReconciler) Reconcile(ctx context.Context, req reconcile.
 
 	// Reconcile
 	ref := instance.Spec.IdlingResourceRef
+	key := types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}
 	switch ref.Kind {
 	case "Deployment":
 
 		var deploy appsv1.Deployment
-		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &deploy); err != nil {
-			if errors.IsNotFound(err) {
-				if instance.IsBeingDeleted() {
-					if err := r.removeFinalizer(ctx, &instance); err != nil {
-						return ctrl.Result{}, fmt.Errorf("error when deleting finalizer: %v", err)
-					}
-					return ctrl.Result{}, nil
-				}
-				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("unable to read Deployment: %v", err)
+		if err := r.Get(ctx, key, &deploy); err != nil {
+			return r.reconcileResourceNotFound(ctx, instance, err)
 		}
 
 		idler := idler.NewDeploymentIdler(r.Client, log, &deploy)
@@ -115,17 +107,8 @@ func (r *IdlingResourceReconciler) Reconcile(ctx context.Context, req reconcile.
 	case "StatefulSet":
 
 		var sts appsv1.StatefulSet
-		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &sts); err != nil {
-			if errors.IsNotFound(err) {
-				if instance.IsBeingDeleted() {
-					if err := r.removeFinalizer(ctx, &instance); err != nil {
-						return ctrl.Result{}, fmt.Errorf("error when deleting finalizer: %v", err)
-					}
-					return ctrl.Result{}, nil
-				}
-				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("unable to read StatefulSet: %v", err)
+		if err := r.Get(ctx, key, &sts); err != nil {
+			return r.reconcileResourceNotFound(ctx, instance, err)
 		}
 
 		idler := idler.NewStatefulSetIdler(r.Client, log, &sts)
@@ -134,17 +117,8 @@ func (r *IdlingResourceReconciler) Reconcile(ctx context.Context, req reconcile.
 	case "CronJob":
 
 		var cronJob batchv1beta1.CronJob
-		if err := r.Get(ctx, types.NamespacedName{Namespace: instance.Namespace, Name: ref.Name}, &cronJob); err != nil {
-			if errors.IsNotFound(err) {
-				if instance.IsBeingDeleted() {
-					if err := r.removeFinalizer(ctx, &instance); err != nil {
-						return ctrl.Result{}, fmt.Errorf("error when deleting finalizer: %v", err)
-					}
-					return ctrl.Result{}, nil
-				}
-				return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("unable to read Cronjob: %v", err)
+		if err := r.Get(ctx, key, &cronJob); err != nil {
+			return r.reconcileResourceNotFound(ctx, instance, err)
 		}
 
 		idler := idler.NewCronJobIdler(r.Client, log, &cronJob)
@@ -152,6 +126,19 @@ func (r *IdlingResourceReconciler) Reconcile(ctx context.Context, req reconcile.
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *IdlingResourceReconciler) reconcileResourceNotFound(ctx context.Context, instance kidlev1beta1.IdlingResource, err error) (reconcile.Result, error) {
+	if errors.IsNotFound(err) {
+		if instance.IsBeingDeleted() {
+			if err := r.removeFinalizer(ctx, &instance); err != nil {
+				return ctrl.Result{}, fmt.Errorf("error when deleting finalizer: %v", err)
+			}
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+	}
+	return ctrl.Result{}, fmt.Errorf("unable to read %s: %v", instance.Spec.IdlingResourceRef.Kind, err)
 }
 
 func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, instance *kidlev1beta1.IdlingResource) (ctrl.Result, error) {
