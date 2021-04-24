@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/jessevdk/go-flags"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -20,7 +21,7 @@ type idleCommandOptions struct {
 	Args struct {
 		Name string `long:"name" env:"NAME" description:"idling resource name to idle"`
 	} `positional-args:"yes" required:"1"`
-	Namespace string `long:"namespace" env:"NAMESPACE" required:"1" short:"n" description:"IdlingResource namespace"`
+	Namespace string `long:"namespace" env:"NAMESPACE" short:"n" description:"IdlingResource namespace"`
 }
 
 // wakeupCommandOptions are the options of the wakeup command
@@ -28,7 +29,7 @@ type wakeupCommandOptions struct {
 	Args struct {
 		Name string `long:"name" env:"NAME" description:"idling resource name to wakeup"`
 	} `positional-args:"yes" required:"1"`
-	Namespace string `long:"namespace" env:"NAMESPACE" required:"1" short:"n" description:"IdlingResource namespace"`
+	Namespace string `long:"namespace" env:"NAMESPACE" short:"n" description:"IdlingResource namespace"`
 }
 
 func main() {
@@ -57,10 +58,16 @@ func main() {
 	// execute active command
 	switch p.Active.Name {
 	case "idle":
-		logf.Log.V(0).Info("idling", "namespace", opts.IdleCmd.Namespace, "name", opts.IdleCmd.Args.Name)
+		namespace := opts.IdleCmd.Namespace
+		if opts.IdleCmd.Namespace == "" {
+			clientCfg, _ := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+			namespace = clientCfg.Contexts[clientCfg.CurrentContext].Namespace
+		}
+
+		logf.Log.V(0).Info("idling", "namespace", namespace, "name", opts.IdleCmd.Args.Name)
 
 		done, err := kidle.applyDesiredIdleState(true, &types.NamespacedName{
-			Namespace: opts.IdleCmd.Namespace,
+			Namespace: namespace,
 			Name:      opts.IdleCmd.Args.Name,
 		})
 		if err != nil {
@@ -69,16 +76,22 @@ func main() {
 		}
 
 		if done {
-			logf.Log.V(0).Info("scaled to 0", "namespace", opts.IdleCmd.Namespace, "name", opts.IdleCmd.Args.Name)
+			logf.Log.V(0).Info("scaled to 0", "namespace", namespace, "name", opts.IdleCmd.Args.Name)
 		} else {
-			logf.Log.V(0).Info("already idled", "namespace", opts.IdleCmd.Namespace, "name", opts.IdleCmd.Args.Name)
+			logf.Log.V(0).Info("already idled", "namespace", namespace, "name", opts.IdleCmd.Args.Name)
 		}
 
 	case "wakeup":
-		logf.Log.V(0).Info("waking up", "namespace", opts.WakeUpCmd.Namespace, "name", opts.WakeUpCmd.Args.Name)
+		namespace := opts.IdleCmd.Namespace
+		if opts.WakeUpCmd.Namespace == "" {
+			clientCfg, _ := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+			namespace = clientCfg.Contexts[clientCfg.CurrentContext].Namespace
+		}
+
+		logf.Log.V(0).Info("waking up", "namespace", namespace, "name", opts.WakeUpCmd.Args.Name)
 
 		done, err := kidle.applyDesiredIdleState(false, &types.NamespacedName{
-			Namespace: opts.WakeUpCmd.Namespace,
+			Namespace: namespace,
 			Name:      opts.WakeUpCmd.Args.Name,
 		})
 		if err != nil {
@@ -87,9 +100,9 @@ func main() {
 		}
 
 		if done {
-			logf.Log.V(0).Info("waked up", "namespace", opts.WakeUpCmd.Namespace, "name", opts.WakeUpCmd.Args.Name)
+			logf.Log.V(0).Info("waked up", "namespace", namespace, "name", opts.WakeUpCmd.Args.Name)
 		} else {
-			logf.Log.V(0).Info("already waked up", "namespace", opts.WakeUpCmd.Namespace, "name", opts.WakeUpCmd.Args.Name)
+			logf.Log.V(0).Info("already waked up", "namespace", namespace, "name", opts.WakeUpCmd.Args.Name)
 		}
 	}
 }
