@@ -53,15 +53,15 @@ jobs:
     - name: Install ginkgo
       run: make ginkgo
       shell: bash
-      working-directory: ./cmd/controller
+      working-directory: ./cmd/operator
 
     - name: Run ginkgo tests
       continue-on-error: true
-      run: make WHAT=controller gtest
+      run: make WHAT=operator gtest
       shell: bash
 
     - name: Build code
-      run: make WHAT=controller
+      run: make WHAT=operator
       shell: bash
 
     - name: Login to DockerHub
@@ -80,7 +80,7 @@ jobs:
       uses: docker/build-push-action@v2
       with:
         context: .
-        file: ./cmd/controller/Dockerfile
+        file: ./cmd/operator/Dockerfile
         push: true
         tags: "kidle/kidle-operator:latest"
 
