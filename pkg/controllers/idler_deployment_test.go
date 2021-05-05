@@ -1,0 +1,262 @@
+package controllers
+
+import (
+	"context"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
+	"github.com/orphaner/kidle/pkg/utils/k8s"
+	"github.com/orphaner/kidle/pkg/utils/pointer"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"time"
+)
+
+var _ = Describe("idling/wakeup Deployments", func() {
+	const (
+		timeout  = time.Second * 10
+		duration = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+	var (
+		ctx = context.Background()
+	)
+
+	Context("Deployment suite", func() {
+		var deployKey = types.NamespacedName{Name: "nginx", Namespace: "default"}
+		var deploy = appsv1.Deployment{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Deployment",
+				APIVersion: "apps/appsv1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      deployKey.Name,
+				Namespace: deployKey.Namespace,
+				Labels: map[string]string{
+					"app": "nginx",
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: pointer.Int32(1),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "nginx",
+					},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "nginx",
+						Namespace: "default",
+						Labels: map[string]string{
+							"app": "nginx",
+						},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  "nginx",
+								Image: "nginx",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		It("Has created an IdlingResource object", func() {
+
+			By("Creating the IdlingResource object")
+			ref := kidlev1beta1.CrossVersionObjectReference{
+				Kind:       "Deployment",
+				Name:       deployKey.Name,
+				APIVersion: "apps/appsv1",
+			}
+			Expect(k8sClient.Create(ctx, newIdlingResource(&ref))).Should(Succeed())
+
+			By("Validation of the IdlingResource creation")
+			createdIR := &kidlev1beta1.IdlingResource{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, irKey, createdIR)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdIR.Spec).To(Equal(kidlev1beta1.IdlingResourceSpec{
+				IdlingResourceRef: kidlev1beta1.CrossVersionObjectReference{
+					Kind:       "Deployment",
+					Name:       "nginx",
+					APIVersion: "apps/appsv1",
+				},
+				Idle:           false,
+				IdlingStrategy: nil,
+				WakeupStrategy: nil,
+			}))
+		})
+
+		It("Is referenced by a Deployment", func() {
+
+			By("Creating the Deployment object")
+			Expect(k8sClient.Create(ctx, &deploy)).Should(Succeed())
+
+			Eventually(func() bool {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			By("Checking for reference to be set in annotations")
+			Eventually(func() (string, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return "", err
+				}
+				return d.ObjectMeta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference], nil
+			}, timeout, interval).Should(Equal("ir"))
+		})
+
+		It("It should not have idled the deployment", func() {
+
+			By("Getting the Deployment")
+			d := &appsv1.Deployment{}
+			Expect(k8sClient.Get(ctx, deployKey, d)).Should(Succeed())
+
+			By("Checking that Replicas has not changed")
+			Expect(d.Spec.Replicas).Should(Equal(deploy.Spec.Replicas))
+		})
+
+		It("Should idle the Deployment", func() {
+			By("Idling the deployment")
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+
+			ir.Spec.Idle = true
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			By("Checking that Replicas == 0")
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(0)))
+		})
+
+		It("Should watch the Deployment", func() {
+			By("Trying to update replicas on a idled object")
+			d := &appsv1.Deployment{}
+			Expect(k8sClient.Get(ctx, deployKey, d)).Should(Succeed())
+
+			d.Spec.Replicas = pointer.Int32(1)
+			Expect(k8sClient.Update(ctx, d)).Should(Succeed())
+
+			By("Checking that Replicas still equals to 0")
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(0)))
+		})
+
+		It("Should wakeup the Deployment", func() {
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+
+			ir.Spec.Idle = false
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			// We'll need to wait until the controller has idled the Deployment
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(1)))
+		})
+
+		It("Should wakeup the Deployment to previous replicas", func() {
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+
+			ir.Spec.Idle = false
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			d := &appsv1.Deployment{}
+			Expect(k8sClient.Get(ctx, deployKey, d)).Should(Succeed())
+
+			d.Spec.Replicas = pointer.Int32(2)
+			Expect(k8sClient.Update(ctx, d)).Should(Succeed())
+
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(2)))
+
+			ir.Spec.Idle = true
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			// We'll need to wait until the controller has idled the Deployment
+			By("idling")
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(0)))
+
+			ir.Spec.Idle = false
+			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+
+			// We'll need to wait until the controller has waked up the Deployment
+			By("waking up")
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(2)))
+		})
+
+		It("Should wakeup and cleanup Deployment when removing the IdlingResource", func() {
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+
+			By("deleting the IdlingResource")
+			Expect(k8sClient.Delete(ctx, ir)).Should(Succeed())
+
+			By("checking the Deployment has not been deleted")
+			d := &appsv1.Deployment{}
+			Consistently(func() error {
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return err
+				}
+				return nil
+
+			}, 5*time.Second, interval).Should(Succeed())
+
+			By("checking the Deployment annotations have been removed")
+			Expect(k8s.HasAnnotation(&d.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas)).ShouldNot(BeTrue())
+			Expect(k8s.HasAnnotation(&d.ObjectMeta, kidlev1beta1.MetadataIdlingResourceReference)).ShouldNot(BeTrue())
+			Expect(k8s.HasAnnotation(&d.ObjectMeta, kidlev1beta1.MetadataExpectedState)).ShouldNot(BeTrue())
+
+			By("checking the Deployment has been scaled up")
+			Expect(d.Spec.Replicas).Should(Equal(pointer.Int32(2)))
+		})
+	})
+})
