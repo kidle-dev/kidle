@@ -22,6 +22,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 	)
 	var (
 		ctx = context.Background()
+		irKey = types.NamespacedName{Name: "ir-idler-sts", Namespace: "default"}
 	)
 
 	Context("StatefulSet suite", func() {
@@ -73,14 +74,13 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 				Name:       stsKey.Name,
 				APIVersion: "apps/appsv1",
 			}
-			Expect(k8sClient.Create(ctx, newIdlingResource(&ref))).Should(Succeed())
+			Expect(k8sClient.Create(ctx, newIdlingResource(irKey, &ref))).Should(Succeed())
 
 			By("Validation of the IdlingResource creation")
 			createdIR := &kidlev1beta1.IdlingResource{}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, irKey, createdIR)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+			Eventually(func() error {
+				return k8sClient.Get(ctx, irKey, createdIR)
+			}, timeout, interval).Should(Succeed())
 			Expect(createdIR.Spec).To(Equal(kidlev1beta1.IdlingResourceSpec{
 				IdlingResourceRef: kidlev1beta1.CrossVersionObjectReference{
 					Kind:       "StatefulSet",
@@ -98,21 +98,13 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 			By("Creating the StatefulSet object")
 			Expect(k8sClient.Create(ctx, &statefulSet)).Should(Succeed())
 
-			Eventually(func() bool {
-				sts := &appsv1.StatefulSet{}
-				err := k8sClient.Get(ctx, stsKey, sts)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+			sts := &appsv1.StatefulSet{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, stsKey, sts)
+			}, timeout, interval).Should(Succeed())
 
 			By("Checking for reference to be set in annotations")
-			Eventually(func() (string, error) {
-				sts := &appsv1.StatefulSet{}
-				err := k8sClient.Get(ctx, stsKey, sts)
-				if err != nil {
-					return "", err
-				}
-				return sts.ObjectMeta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference], nil
-			}, timeout, interval).Should(Equal("ir"))
+			Expect(sts.ObjectMeta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference], irKey.Name)
 		})
 
 		It("It should not have idled the statefulset", func() {
@@ -170,7 +162,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 			ir.Spec.Idle = false
 			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
 
-			// We'll need to wait until the controller has idled the StatefulSet
+			// We'll need to wait until the controller has waked up the StatefulSet
 			Eventually(func() (*int32, error) {
 				sts := &appsv1.StatefulSet{}
 				err := k8sClient.Get(ctx, stsKey, sts)

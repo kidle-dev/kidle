@@ -15,17 +15,15 @@ import (
 	"time"
 )
 
-var irKey = types.NamespacedName{Name: "ir", Namespace: "default"}
-
-func newIdlingResource(ref *kidlev1beta1.CrossVersionObjectReference) *kidlev1beta1.IdlingResource {
+func newIdlingResource(key types.NamespacedName, ref *kidlev1beta1.CrossVersionObjectReference) *kidlev1beta1.IdlingResource {
 	return &kidlev1beta1.IdlingResource{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "IdlingResource",
 			APIVersion: "kidle.beroot.org/v1beta1", // kidlev1beta1.GroupVersion.String()
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      irKey.Name,
-			Namespace: irKey.Namespace,
+			Name:      key.Name,
+			Namespace: key.Namespace,
 		},
 		Spec: kidlev1beta1.IdlingResourceSpec{
 			IdlingResourceRef: *ref,
@@ -41,6 +39,7 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 		interval = time.Millisecond * 250
 	)
 	var (
+		irKey = types.NamespacedName{Name: "ir-idler-cronjob", Namespace: "default"}
 		ctx = context.Background()
 	)
 
@@ -85,14 +84,13 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 				Name:       cronJobKey.Name,
 				APIVersion: "batch/v1beta1",
 			}
-			Expect(k8sClient.Create(ctx, newIdlingResource(&ref))).Should(Succeed())
+			Expect(k8sClient.Create(ctx, newIdlingResource(irKey, &ref))).Should(Succeed())
 
 			By("Validation of the IdlingResource creation")
 			createdIR := &kidlev1beta1.IdlingResource{}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, irKey, createdIR)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+			Eventually(func() error {
+				return k8sClient.Get(ctx, irKey, createdIR)
+			}, timeout, interval).Should(Succeed())
 			Expect(createdIR.Spec).To(Equal(kidlev1beta1.IdlingResourceSpec{
 				IdlingResourceRef: kidlev1beta1.CrossVersionObjectReference{
 					Kind:       "CronJob",
@@ -110,21 +108,13 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 			By("Creating the CronJob object")
 			Expect(k8sClient.Create(ctx, &cronJob)).Should(Succeed())
 
-			Eventually(func() bool {
-				cj := &batchv1beta1.CronJob{}
-				err := k8sClient.Get(ctx, cronJobKey, cj)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+			cj := &batchv1beta1.CronJob{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, cronJobKey, cj)
+			}, timeout, interval).Should(Succeed())
 
 			By("Checking for reference to be set in annotations")
-			Eventually(func() (string, error) {
-				cj := &batchv1beta1.CronJob{}
-				err := k8sClient.Get(ctx, cronJobKey, cj)
-				if err != nil {
-					return "", err
-				}
-				return cj.ObjectMeta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference], nil
-			}, timeout, interval).Should(Equal("ir"))
+			Expect(cj.ObjectMeta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference], irKey.Name)
 		})
 
 		It("It should not have idled the statefulset", func() {
@@ -182,7 +172,7 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 			ir.Spec.Idle = false
 			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
 
-			// We'll need to wait until the controller has idled the CronJob
+			// We'll need to wait until the controller has waked up the CronJob
 			Eventually(func() (*bool, error) {
 				cj := &batchv1beta1.CronJob{}
 				err := k8sClient.Get(ctx, cronJobKey, cj)

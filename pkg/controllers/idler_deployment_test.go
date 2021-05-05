@@ -22,6 +22,7 @@ var _ = Describe("idling/wakeup Deployments", func() {
 	)
 	var (
 		ctx = context.Background()
+		irKey = types.NamespacedName{Name: "ir-idler-deploy", Namespace: "default"}
 	)
 
 	Context("Deployment suite", func() {
@@ -73,14 +74,13 @@ var _ = Describe("idling/wakeup Deployments", func() {
 				Name:       deployKey.Name,
 				APIVersion: "apps/appsv1",
 			}
-			Expect(k8sClient.Create(ctx, newIdlingResource(&ref))).Should(Succeed())
+			Expect(k8sClient.Create(ctx, newIdlingResource(irKey, &ref))).Should(Succeed())
 
 			By("Validation of the IdlingResource creation")
 			createdIR := &kidlev1beta1.IdlingResource{}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, irKey, createdIR)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+			Eventually(func() error {
+				return k8sClient.Get(ctx, irKey, createdIR)
+			}, timeout, interval).Should(Succeed())
 			Expect(createdIR.Spec).To(Equal(kidlev1beta1.IdlingResourceSpec{
 				IdlingResourceRef: kidlev1beta1.CrossVersionObjectReference{
 					Kind:       "Deployment",
@@ -98,21 +98,13 @@ var _ = Describe("idling/wakeup Deployments", func() {
 			By("Creating the Deployment object")
 			Expect(k8sClient.Create(ctx, &deploy)).Should(Succeed())
 
-			Eventually(func() bool {
-				d := &appsv1.Deployment{}
-				err := k8sClient.Get(ctx, deployKey, d)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+			d := &appsv1.Deployment{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployKey, d)
+			}, timeout, interval).Should(Succeed())
 
 			By("Checking for reference to be set in annotations")
-			Eventually(func() (string, error) {
-				d := &appsv1.Deployment{}
-				err := k8sClient.Get(ctx, deployKey, d)
-				if err != nil {
-					return "", err
-				}
-				return d.ObjectMeta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference], nil
-			}, timeout, interval).Should(Equal("ir"))
+			Expect(d.ObjectMeta.GetAnnotations()[kidlev1beta1.MetadataIdlingResourceReference], irKey.Name)
 		})
 
 		It("It should not have idled the deployment", func() {
@@ -170,7 +162,7 @@ var _ = Describe("idling/wakeup Deployments", func() {
 			ir.Spec.Idle = false
 			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
 
-			// We'll need to wait until the controller has idled the Deployment
+			// We'll need to wait until the controller has waked up the Deployment
 			Eventually(func() (*int32, error) {
 				d := &appsv1.Deployment{}
 				err := k8sClient.Get(ctx, deployKey, d)
