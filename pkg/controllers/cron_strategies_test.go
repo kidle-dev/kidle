@@ -174,14 +174,14 @@ var _ = Describe("cronjob strategy", func() {
 	assertCronJob = func(irKey types.NamespacedName, command string, cron string) {
 		By("Validation of the cronjob creation")
 		cj := &batchv1beta1.CronJob{}
-		rbKey := types.NamespacedName{Name: k8s.ToDNSName("kidle", irKey.Name, command), Namespace: irKey.Namespace}
+		cjKey := types.NamespacedName{Name: k8s.ToDNSName("kidle", irKey.Name, command), Namespace: irKey.Namespace}
 		Eventually(func() error {
-			return k8sClient.Get(ctx, rbKey, cj)
+			return k8sClient.Get(ctx, cjKey, cj)
 		}, timeout, interval).Should(Succeed())
 
 		By("Validation of the cronjob metadata")
-		Expect(cj.ObjectMeta.Name).To(Equal(rbKey.Name))
-		Expect(cj.ObjectMeta.Namespace).To(Equal(rbKey.Namespace))
+		Expect(cj.ObjectMeta.Name).To(Equal(cjKey.Name))
+		Expect(cj.ObjectMeta.Namespace).To(Equal(cjKey.Namespace))
 
 		By("Validation of the cronjob spec")
 		Expect(cj.Spec.Suspend).To(Equal(pointer.Bool(false)))
