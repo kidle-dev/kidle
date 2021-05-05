@@ -47,7 +47,7 @@ func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, 
 	// Create idle cronjob RBAC for the instance
 	if instance.Spec.IdlingStrategy != nil && instance.Spec.IdlingStrategy.CronStrategy != nil {
 
-		cjName := k8s.ToDNSName("kidle", instance.Name, "idle")
+		cjName := k8s.ToDNSName("kidle", instance.Name, CommandIdle)
 		cjValues := &CronJobValues{
 			key:          types.NamespacedName{Namespace: instance.Namespace, Name: cjName},
 			instanceName: instance.Name,
@@ -64,7 +64,7 @@ func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, 
 	// Create wakeup cronjob RBAC for the instance
 	if instance.Spec.WakeupStrategy != nil && instance.Spec.WakeupStrategy.CronStrategy != nil {
 
-		cjName := k8s.ToDNSName("kidle", instance.Name, "wakeup")
+		cjName := k8s.ToDNSName("kidle", instance.Name, CommandWakeup)
 		cjValues := &CronJobValues{
 			key:          types.NamespacedName{Namespace: instance.Namespace, Name: cjName},
 			instanceName: instance.Name,
@@ -79,7 +79,6 @@ func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, 
 	}
 
 	// TODO: Remove cronjob if idle strategy has changed or been removed
-
 
 	// TODO: Remove cronjob if wakeup strategy has changed or been removed
 
@@ -252,9 +251,8 @@ func (r *IdlingResourceReconciler) createRBAC(ctx context.Context, instance *kid
 					Name:      rbName,
 				},
 				Subjects: []rbacv1.Subject{{
-					APIGroup: sa.GroupVersionKind().Group,
-					Kind:     "ServiceAccount",
-					Name:     sa.Name,
+					Kind: "ServiceAccount",
+					Name: sa.Name,
 				}},
 				RoleRef: rbacv1.RoleRef{
 					APIGroup: role.GroupVersionKind().Group,
