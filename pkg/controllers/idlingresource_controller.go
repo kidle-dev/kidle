@@ -142,11 +142,6 @@ func (r *IdlingResourceReconciler) reconcileResourceNotFound(ctx context.Context
 	return ctrl.Result{}, fmt.Errorf("unable to read %s: %v", instance.Spec.IdlingResourceRef.Kind, err)
 }
 
-func hasCronStrategy(instance *kidlev1beta1.IdlingResource) bool {
-	return (instance.Spec.IdlingStrategy != nil && instance.Spec.IdlingStrategy.CronStrategy != nil) ||
-		(instance.Spec.WakeupStrategy != nil && instance.Spec.WakeupStrategy.CronStrategy != nil)
-}
-
 func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, instance *kidlev1beta1.IdlingResource, idler idler.Idler) (ctrl.Result, error) {
 
 	ref := instance.Spec.IdlingResourceRef

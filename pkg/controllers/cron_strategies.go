@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -34,53 +35,75 @@ type CronJobValues struct {
 }
 
 func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, instance *kidlev1beta1.IdlingResource) (ctrl.Result, error) {
-	if !hasCronStrategy(instance) {
-		return ctrl.Result{}, nil
-	}
-
 	// Create dedicated RBAC for the instance
 	if err := r.createRBAC(ctx, instance); err != nil {
 		r.Event(instance, corev1.EventTypeWarning, "Adding RBAC", fmt.Sprintf("Failed to add RBAC: %s", err))
 		return reconcile.Result{}, fmt.Errorf("error when adding RBAC: %v", err)
 	}
 
-	// Create idle cronjob RBAC for the instance
+	cjIdleKey := types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      k8s.ToDNSName("kidle", instance.Name, CommandIdle),
+	}
+
+	// Create or update idle cronjob for the instance
 	if instance.Spec.IdlingStrategy != nil && instance.Spec.IdlingStrategy.CronStrategy != nil {
-
-		cjName := k8s.ToDNSName("kidle", instance.Name, CommandIdle)
-		cjValues := &CronJobValues{
-			key:          types.NamespacedName{Namespace: instance.Namespace, Name: cjName},
+		cjIdleValues := &CronJobValues{
+			key:          cjIdleKey,
 			instanceName: instance.Name,
-			strategy:     instance.Spec.IdlingStrategy.CronStrategy,
 			command:      CommandIdle,
+			strategy:     instance.Spec.IdlingStrategy.CronStrategy,
 		}
-
-		if err := r.createOrUpdateCronJob(ctx, instance, cjValues); err != nil {
+		if err := r.createOrUpdateCronJob(ctx, instance, cjIdleValues); err != nil {
 			r.Event(instance, corev1.EventTypeWarning, "Creating idle CronJob", fmt.Sprintf("Failed to create CronJob: %s", err))
 			return reconcile.Result{}, fmt.Errorf("error when creating idle CronJob: %v", err)
+		} else {
+			r.Event(instance, corev1.EventTypeNormal, "Creating idle CronJob", "Created")
 		}
+	} else {
+		// Delete the idle cronjob if necessary
+		cronJob := &v1beta1.CronJob{}
+		if err := r.Get(ctx, cjIdleKey, cronJob); err == nil {
+			if err := r.Delete(ctx, cronJob, client.PropagationPolicy(metav1.DeletePropagationBackground)); client.IgnoreNotFound(err) != nil {
+				r.Event(instance, corev1.EventTypeWarning, "Deleting idle CronJob", fmt.Sprintf("Failed to delete CronJob: %s", err))
+				return reconcile.Result{}, fmt.Errorf("error when deleting idle CronJob: %v", err)
+			} else {
+				r.Event(instance, corev1.EventTypeNormal, "Deleting idle CronJob", "Deleted")
+			}
+		}
+	}
+
+	cjWakeupKey := types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      k8s.ToDNSName("kidle", instance.Name, CommandWakeup),
 	}
 
 	// Create wakeup cronjob RBAC for the instance
 	if instance.Spec.WakeupStrategy != nil && instance.Spec.WakeupStrategy.CronStrategy != nil {
-
-		cjName := k8s.ToDNSName("kidle", instance.Name, CommandWakeup)
 		cjValues := &CronJobValues{
-			key:          types.NamespacedName{Namespace: instance.Namespace, Name: cjName},
+			key:          cjWakeupKey,
 			instanceName: instance.Name,
-			strategy:     instance.Spec.WakeupStrategy.CronStrategy,
 			command:      CommandWakeup,
+			strategy:     instance.Spec.WakeupStrategy.CronStrategy,
 		}
-
 		if err := r.createOrUpdateCronJob(ctx, instance, cjValues); err != nil {
 			r.Event(instance, corev1.EventTypeWarning, "Creating wakeup CronJob", fmt.Sprintf("Failed to create CronJob: %s", err))
 			return reconcile.Result{}, fmt.Errorf("error when creating wakeup CronJob: %v", err)
+		} else {
+			r.Event(instance, corev1.EventTypeNormal, "Creating wakeup CronJob", "Created")
+		}
+	} else {
+		// Delete the wakeup cronjob if necessary
+		cronJob := &v1beta1.CronJob{}
+		if err := r.Get(ctx, cjWakeupKey, cronJob); err == nil {
+			if err := r.Delete(ctx, cronJob, client.PropagationPolicy(metav1.DeletePropagationBackground)); client.IgnoreNotFound(err) != nil {
+				r.Event(instance, corev1.EventTypeWarning, "Deleting wakeup CronJob", fmt.Sprintf("Failed to delete CronJob: %s", err))
+				return reconcile.Result{}, fmt.Errorf("error when deleting wakeup CronJob: %v", err)
+			} else {
+				r.Event(instance, corev1.EventTypeNormal, "Deleting wakeup CronJob", "Deleted")
+			}
 		}
 	}
-
-	// TODO: Remove cronjob if idle strategy has changed or been removed
-
-	// TODO: Remove cronjob if wakeup strategy has changed or been removed
 
 	return ctrl.Result{}, nil
 }
@@ -97,6 +120,7 @@ func (r *IdlingResourceReconciler) createOrUpdateCronJob(ctx context.Context, in
 			if err := r.Create(ctx, cj); err != nil {
 				return fmt.Errorf("unable to create cronJob: %v", err)
 			}
+			return nil
 		} else {
 			return fmt.Errorf("unable to get cronJob: %v", err)
 		}

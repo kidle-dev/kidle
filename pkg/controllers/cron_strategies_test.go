@@ -10,7 +10,9 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
@@ -56,6 +58,21 @@ var _ = Describe("cronjob strategy", func() {
 		It("Has created a role binding", func() { assertRoleBinding(irKey) })
 		It("Has created a cronjob", func() { assertCronJob(irKey, CommandIdle, cron) })
 
+		XIt("Has removed cronjob strategy", func() {
+			By("Removing the cronjob strategy")
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+			ir.Spec.IdlingStrategy = nil
+			Expect(k8sClient.Update(ctx, ir, &client.UpdateOptions{})).Should(Succeed())
+
+			By("Has deleted the cronjob")
+			cjKey := types.NamespacedName{Name: k8s.ToDNSName("kidle", irKey.Name, CommandIdle), Namespace: irKey.Namespace}
+			Eventually(func() bool {
+				cj := &batchv1beta1.CronJob{}
+				err := k8sClient.Get(ctx, cjKey, cj)
+				return errors.IsNotFound(err)
+			}, timeout, interval).Should(Succeed())
+		})
 	})
 
 	Context("Wakeup cronjob strategy suite", func() {
@@ -85,6 +102,22 @@ var _ = Describe("cronjob strategy", func() {
 		It("Has created a role", func() { assertRole(irKey) })
 		It("Has created a role binding", func() { assertRoleBinding(irKey) })
 		It("Has created a cronjob", func() { assertCronJob(irKey, CommandWakeup, cron) })
+
+		XIt("Has removed cronjob strategy", func() {
+			By("Removing the cronjob strategy")
+			ir := &kidlev1beta1.IdlingResource{}
+			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+			ir.Spec.WakeupStrategy = nil
+			Expect(k8sClient.Update(ctx, ir, &client.UpdateOptions{})).Should(Succeed())
+
+			By("Has deleted the cronjob")
+			cjKey := types.NamespacedName{Name: k8s.ToDNSName("kidle", irKey.Name, CommandWakeup), Namespace: irKey.Namespace}
+			Eventually(func() bool {
+				cj := &batchv1beta1.CronJob{}
+				err := k8sClient.Get(ctx, cjKey, cj)
+				return errors.IsNotFound(err)
+			}, timeout, interval).Should(Succeed())
+		})
 	})
 
 	assertServiceAccount = func(irKey types.NamespacedName) {
