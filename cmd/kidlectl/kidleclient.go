@@ -39,8 +39,14 @@ func NewKidleClient(namespaceOverride string) (*KidleClient, error) {
 	}
 
 	// Create a client with kidle scheme registered
-	kidlev1beta1.AddToScheme(scheme.Scheme)
+	err = kidlev1beta1.AddToScheme(scheme.Scheme)
+	if err != nil {
+		return nil, fmt.Errorf("error when adding kidle to Scheme: %v", err)
+	}
 	client, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return nil, fmt.Errorf("error when creating client: %v", err)
+	}
 	return &KidleClient{Client: client, Namespace: namespace}, nil
 }
 
