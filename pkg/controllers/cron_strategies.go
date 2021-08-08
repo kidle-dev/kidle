@@ -261,7 +261,9 @@ func (r *IdlingResourceReconciler) createRBAC(ctx context.Context, instance *kid
 		}
 	} else {
 		role.Rules[0] = policyRule
-		r.Update(ctx, role)
+		if err := r.Update(ctx, role) ; err != nil {
+			return fmt.Errorf("unable to update role: %v", err)
+		}
 	}
 
 	rbName := k8s.ToDNSName("kidle", instance.Name, "rb")

@@ -89,7 +89,9 @@ func (r *IdlingResourceReconciler) Reconcile(ctx context.Context, req reconcile.
 		r.Event(&instance, corev1.EventTypeNormal, "Added", "Object finalizer is added")
 	}
 
-	r.ReconcileCronStrategies(ctx, &instance)
+	if result, err := r.ReconcileCronStrategies(ctx, &instance); err != nil {
+		return result, err
+	}
 
 	// Reconcile
 	ref := instance.Spec.IdlingResourceRef
