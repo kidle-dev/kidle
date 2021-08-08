@@ -15,69 +15,119 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
+	KidlectlImage        = "kidle/kidlectl:latest"
 	CronJobContainerName = "kidlectl"
+	CommandIdle          = "idle"
+	CommandWakeup        = "wakeup"
 )
 
-func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, instance *kidlev1beta1.IdlingResource) (ctrl.Result, error) {
-	if !hasCronStrategy(instance) {
-		return ctrl.Result{}, nil
-	}
+type CronJobValues struct {
+	key          types.NamespacedName
+	instanceName string
+	strategy     *kidlev1beta1.CronStrategy
+	command      string
+}
 
+func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, instance *kidlev1beta1.IdlingResource) (ctrl.Result, error) {
 	// Create dedicated RBAC for the instance
 	if err := r.createRBAC(ctx, instance); err != nil {
 		r.Event(instance, corev1.EventTypeWarning, "Adding RBAC", fmt.Sprintf("Failed to add RBAC: %s", err))
 		return reconcile.Result{}, fmt.Errorf("error when adding RBAC: %v", err)
 	}
 
-	// Create idle cronjob RBAC for the instance
-	if instance.Spec.IdlingStrategy != nil && instance.Spec.IdlingStrategy.CronStrategy != nil {
-		cjName := fmt.Sprintf("kidle-%s-idle", instance.Name)
-		key := types.NamespacedName{Namespace: instance.Namespace, Name: cjName}
+	cjIdleKey := types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      k8s.ToDNSName("kidle", instance.Name, CommandIdle),
+	}
 
-		if err := r.createCronJob(ctx, instance, key, "idle"); err != nil {
+	// Create or update idle cronjob for the instance
+	if instance.Spec.IdlingStrategy != nil && instance.Spec.IdlingStrategy.CronStrategy != nil {
+		cjIdleValues := &CronJobValues{
+			key:          cjIdleKey,
+			instanceName: instance.Name,
+			command:      CommandIdle,
+			strategy:     instance.Spec.IdlingStrategy.CronStrategy,
+		}
+		if err := r.createOrUpdateCronJob(ctx, instance, cjIdleValues); err != nil {
 			r.Event(instance, corev1.EventTypeWarning, "Creating idle CronJob", fmt.Sprintf("Failed to create CronJob: %s", err))
 			return reconcile.Result{}, fmt.Errorf("error when creating idle CronJob: %v", err)
+		} else {
+			r.Event(instance, corev1.EventTypeNormal, "Creating idle CronJob", "Created")
 		}
+	} else {
+		// Delete the idle cronjob if necessary
+		cronJob := &v1beta1.CronJob{}
+		if err := r.Get(ctx, cjIdleKey, cronJob); err == nil {
+			if err := r.Delete(ctx, cronJob, client.PropagationPolicy(metav1.DeletePropagationBackground)); client.IgnoreNotFound(err) != nil {
+				r.Event(instance, corev1.EventTypeWarning, "Deleting idle CronJob", fmt.Sprintf("Failed to delete CronJob: %s", err))
+				return reconcile.Result{}, fmt.Errorf("error when deleting idle CronJob: %v", err)
+			} else {
+				r.Event(instance, corev1.EventTypeNormal, "Deleting idle CronJob", "Deleted")
+			}
+		}
+	}
+
+	cjWakeupKey := types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      k8s.ToDNSName("kidle", instance.Name, CommandWakeup),
 	}
 
 	// Create wakeup cronjob RBAC for the instance
 	if instance.Spec.WakeupStrategy != nil && instance.Spec.WakeupStrategy.CronStrategy != nil {
-		cjName := fmt.Sprintf("kidle-%s-wakeup", instance.Name)
-		key := types.NamespacedName{Namespace: instance.Namespace, Name: cjName}
-
-		if err := r.createCronJob(ctx, instance, key, "wakeup"); err != nil {
+		cjValues := &CronJobValues{
+			key:          cjWakeupKey,
+			instanceName: instance.Name,
+			command:      CommandWakeup,
+			strategy:     instance.Spec.WakeupStrategy.CronStrategy,
+		}
+		if err := r.createOrUpdateCronJob(ctx, instance, cjValues); err != nil {
 			r.Event(instance, corev1.EventTypeWarning, "Creating wakeup CronJob", fmt.Sprintf("Failed to create CronJob: %s", err))
 			return reconcile.Result{}, fmt.Errorf("error when creating wakeup CronJob: %v", err)
+		} else {
+			r.Event(instance, corev1.EventTypeNormal, "Creating wakeup CronJob", "Created")
+		}
+	} else {
+		// Delete the wakeup cronjob if necessary
+		cronJob := &v1beta1.CronJob{}
+		if err := r.Get(ctx, cjWakeupKey, cronJob); err == nil {
+			if err := r.Delete(ctx, cronJob, client.PropagationPolicy(metav1.DeletePropagationBackground)); client.IgnoreNotFound(err) != nil {
+				r.Event(instance, corev1.EventTypeWarning, "Deleting wakeup CronJob", fmt.Sprintf("Failed to delete CronJob: %s", err))
+				return reconcile.Result{}, fmt.Errorf("error when deleting wakeup CronJob: %v", err)
+			} else {
+				r.Event(instance, corev1.EventTypeNormal, "Deleting wakeup CronJob", "Deleted")
+			}
 		}
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *IdlingResourceReconciler) createCronJob(ctx context.Context, instance *kidlev1beta1.IdlingResource, key types.NamespacedName, command string) error {
+func (r *IdlingResourceReconciler) createOrUpdateCronJob(ctx context.Context, instance *kidlev1beta1.IdlingResource, cjValues *CronJobValues) error {
 	cronJob := &v1beta1.CronJob{}
-	if err := r.Get(ctx, key, cronJob); err != nil {
+	if err := r.Get(ctx, cjValues.key, cronJob); err != nil {
 		if errors.IsNotFound(err) {
-			cj := NewCronJob(key)
-			setCronjobValues(cj, instance, "idle")
+			cj := NewCronJob(cjValues.key)
+			setCronjobValues(cj, cjValues)
 			if err := controllerutil.SetControllerReference(instance, cj, r.Scheme); err != nil {
 				return fmt.Errorf("unable to set controller reference for cronJob: %v", err)
 			}
 			if err := r.Create(ctx, cj); err != nil {
 				return fmt.Errorf("unable to create cronJob: %v", err)
 			}
+			return nil
 		} else {
 			return fmt.Errorf("unable to get cronJob: %v", err)
 		}
 	}
 
-	if needCronjobValues(cronJob, instance, command) {
-		setCronjobValues(cronJob, instance, command)
+	if cronJobNeedChanges(cronJob, cjValues) {
+		setCronjobValues(cronJob, cjValues)
 		if err := r.Update(ctx, cronJob); err != nil {
 			return fmt.Errorf("unable to update cronJob: %v", err)
 		}
@@ -116,48 +166,51 @@ func NewCronJob(key types.NamespacedName) *batchv1beta1.CronJob {
 	return cj
 }
 
-func needCronjobValues(cronJob *batchv1beta1.CronJob, instance *kidlev1beta1.IdlingResource, command string) bool {
-	if cronJob.Spec.Suspend != pointer.Bool(false) {
+func cronJobNeedChanges(cronJob *batchv1beta1.CronJob, cjValues *CronJobValues) bool {
+	if cronJob.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName != getSaName(cjValues.instanceName) {
 		return true
 	}
 
-	if cronJob.Spec.Schedule != instance.Spec.IdlingStrategy.CronStrategy.Schedule {
+	if cronJob.Spec.Suspend != pointer.Bool(false) {
+		return true
+	}
+	if cronJob.Spec.Schedule != cjValues.strategy.Schedule {
 		return true
 	}
 
 	container := k8s.ContainersToMap(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers)[CronJobContainerName]
-	if container.Image != "kidle/kidlectl:latest" {
+	if container.Image != KidlectlImage {
 		return true
 	}
-	if len(container.Args) != 5 ||
-		container.Args[0] != command ||
-		container.Args[1] != "--namespace" ||
-		container.Args[2] != instance.Namespace ||
-		container.Args[3] != "--name" ||
-		container.Args[4] != instance.Name {
+	if len(container.Args) != 2 ||
+		container.Args[0] != cjValues.command ||
+		container.Args[1] != cjValues.key.Name {
 		return true
 	}
-
 	return false
 }
 
-func setCronjobValues(cronJob *batchv1beta1.CronJob, instance *kidlev1beta1.IdlingResource, command string) {
-	cronJob.Spec.Suspend = pointer.Bool(false)
-	cronJob.Spec.Schedule = instance.Spec.IdlingStrategy.CronStrategy.Schedule
-	container := k8s.ContainersToMap(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers)["kidlectl"]
+func setCronjobValues(cronJob *batchv1beta1.CronJob, cjValues *CronJobValues) {
+	cronJob.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName = getSaName(cjValues.instanceName)
 
-	container.Image = "kidle/kidlectl:latest"
+	cronJob.Spec.Suspend = pointer.Bool(false)
+	cronJob.Spec.Schedule = cjValues.strategy.Schedule
+
+	container := k8s.ContainersToMap(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers)[CronJobContainerName]
+	container.Image = KidlectlImage
 	container.Args = []string{
-		command,
-		"--namespace",
-		instance.Namespace,
-		"--name",
-		instance.Name,
+		cjValues.command,
+		cjValues.instanceName,
 	}
+	k8s.SetContainer(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers, &container)
+}
+
+func getSaName(instanceName string) string {
+	return k8s.ToDNSName("kidle", instanceName, "sa")
 }
 
 func (r *IdlingResourceReconciler) createRBAC(ctx context.Context, instance *kidlev1beta1.IdlingResource) error {
-	saName := fmt.Sprintf("kidle-sa-%s", instance.Name)
+	saName := getSaName(instance.Name)
 	sa := &corev1.ServiceAccount{}
 	saKey := types.NamespacedName{Namespace: instance.Namespace, Name: saName}
 	if err := r.Get(ctx, saKey, sa); err != nil {
@@ -179,9 +232,15 @@ func (r *IdlingResourceReconciler) createRBAC(ctx context.Context, instance *kid
 		}
 	}
 
-	roleName := fmt.Sprintf("kidle-role-%s", instance.Name)
+	roleName := k8s.ToDNSName("kidle", instance.Name, "role")
 	role := &rbacv1.Role{}
 	roleKey := types.NamespacedName{Namespace: instance.Namespace, Name: roleName}
+	policyRule := rbacv1.PolicyRule{
+		Verbs:         []string{"get", "patch", "update"},
+		APIGroups:     []string{"kidle.beroot.org"},
+		Resources:     []string{"idlingresources"},
+		ResourceNames: []string{instance.Name},
+	}
 	if err := r.Get(ctx, roleKey, role); err != nil {
 		if errors.IsNotFound(err) {
 			role = &rbacv1.Role{
@@ -189,12 +248,7 @@ func (r *IdlingResourceReconciler) createRBAC(ctx context.Context, instance *kid
 					Namespace: instance.Namespace,
 					Name:      roleName,
 				},
-				Rules: []rbacv1.PolicyRule{{
-					Verbs:         []string{"get", "patch"},
-					APIGroups:     []string{"kidle.beroot.org"},
-					Resources:     []string{"idlingresources"},
-					ResourceNames: []string{instance.Name},
-				}},
+				Rules: []rbacv1.PolicyRule{policyRule},
 			}
 			if err = controllerutil.SetControllerReference(instance, role, r.Scheme); err != nil {
 				return fmt.Errorf("unable to set controller reference for role: %v", err)
@@ -205,9 +259,14 @@ func (r *IdlingResourceReconciler) createRBAC(ctx context.Context, instance *kid
 		} else {
 			return fmt.Errorf("unable to get role: %v", err)
 		}
+	} else {
+		role.Rules[0] = policyRule
+		if err := r.Update(ctx, role) ; err != nil {
+			return fmt.Errorf("unable to update role: %v", err)
+		}
 	}
 
-	rbName := fmt.Sprintf("kidle-rb-%s", instance.Name)
+	rbName := k8s.ToDNSName("kidle", instance.Name, "rb")
 	rb := &rbacv1.RoleBinding{}
 	rbKey := types.NamespacedName{Namespace: instance.Namespace, Name: rbName}
 	if err := r.Get(ctx, rbKey, rb); err != nil {
@@ -218,9 +277,8 @@ func (r *IdlingResourceReconciler) createRBAC(ctx context.Context, instance *kid
 					Name:      rbName,
 				},
 				Subjects: []rbacv1.Subject{{
-					APIGroup: sa.GroupVersionKind().Group,
-					Kind:     "ServiceAccount",
-					Name:     sa.Name,
+					Kind: "ServiceAccount",
+					Name: sa.Name,
 				}},
 				RoleRef: rbacv1.RoleRef{
 					APIGroup: role.GroupVersionKind().Group,
@@ -237,7 +295,8 @@ func (r *IdlingResourceReconciler) createRBAC(ctx context.Context, instance *kid
 		} else {
 			return fmt.Errorf("unable to get rolebinding: %v", err)
 		}
+	} else {
+		// TODO update if necessary
 	}
-
 	return nil
 }

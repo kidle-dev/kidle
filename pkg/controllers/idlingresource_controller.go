@@ -26,6 +26,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -88,7 +89,9 @@ func (r *IdlingResourceReconciler) Reconcile(ctx context.Context, req reconcile.
 		r.Event(&instance, corev1.EventTypeNormal, "Added", "Object finalizer is added")
 	}
 
-	r.ReconcileCronStrategies(ctx, &instance)
+	if result, err := r.ReconcileCronStrategies(ctx, &instance); err != nil {
+		return result, err
+	}
 
 	// Reconcile
 	ref := instance.Spec.IdlingResourceRef
@@ -139,11 +142,6 @@ func (r *IdlingResourceReconciler) reconcileResourceNotFound(ctx context.Context
 		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 	}
 	return ctrl.Result{}, fmt.Errorf("unable to read %s: %v", instance.Spec.IdlingResourceRef.Kind, err)
-}
-
-func hasCronStrategy(instance *kidlev1beta1.IdlingResource) bool {
-	return (instance.Spec.IdlingStrategy != nil && instance.Spec.IdlingStrategy.CronStrategy != nil) ||
-		(instance.Spec.WakeupStrategy != nil && instance.Spec.WakeupStrategy.CronStrategy != nil)
 }
 
 func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, instance *kidlev1beta1.IdlingResource, idler idler.Idler) (ctrl.Result, error) {
@@ -294,6 +292,10 @@ func (r *IdlingResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kidlev1beta1.IdlingResource{}).
+		Owns(&batchv1beta1.CronJob{}).
+		Owns(&corev1.ServiceAccount{}).
+		Owns(&rbacv1.Role{}).
+		Owns(&rbacv1.RoleBinding{}).
 		WithEventFilter(&KidleChangedPredicate{}).
 		Watches(
 			&source.Kind{Type: &appsv1.Deployment{}},
