@@ -40,14 +40,17 @@ func (i *StatefulSetIdler) NeedWakeup(instance *kidlev1beta1.IdlingResource) boo
 func (i *StatefulSetIdler) Idle(ctx context.Context) error {
 	if i.StatefulSet.Spec.Replicas != pointer.Int32(0) {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			i.Get(ctx, types.NamespacedName{Namespace: i.StatefulSet.Namespace, Name: i.StatefulSet.Name}, i.StatefulSet)
+			if err := i.Get(ctx, types.NamespacedName{Namespace: i.StatefulSet.Namespace, Name: i.StatefulSet.Name}, i.StatefulSet); err != nil {
+				i.Log.Error(err, "unable to get statefulset","name", i.StatefulSet.Name)
+				return err
+			}
 			k8s.AddAnnotation(&i.StatefulSet.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas, strconv.Itoa(int(*i.StatefulSet.Spec.Replicas)))
 			k8s.AddAnnotation(&i.StatefulSet.ObjectMeta, kidlev1beta1.MetadataExpectedState, "0")
 			i.StatefulSet.Spec.Replicas = pointer.Int32(0)
 			return i.Update(ctx, i.StatefulSet)
 		})
 		if err != nil {
-			i.Log.Error(err, "unable to downscale statefulset")
+			i.Log.Error(err, "unable to downscale statefulset", "name", i.StatefulSet.Name)
 			return err
 		}
 		i.Log.V(1).Info("statefulset idled", "name", i.StatefulSet.Name)
@@ -70,13 +73,16 @@ func (i *StatefulSetIdler) Wakeup(ctx context.Context) (*int32, error) {
 
 	if i.StatefulSet.Spec.Replicas != previousReplicas {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			i.Get(ctx, types.NamespacedName{Namespace: i.StatefulSet.Namespace, Name: i.StatefulSet.Name}, i.StatefulSet)
+			if err := i.Get(ctx, types.NamespacedName{Namespace: i.StatefulSet.Namespace, Name: i.StatefulSet.Name}, i.StatefulSet); err != nil {
+				i.Log.Error(err, "unable to get statefulset","name", i.StatefulSet.Name)
+				return err
+			}
 			k8s.AddAnnotation(&i.StatefulSet.ObjectMeta, kidlev1beta1.MetadataExpectedState, strconv.Itoa(int(*previousReplicas)))
 			i.StatefulSet.Spec.Replicas = previousReplicas
 			return i.Update(ctx, i.StatefulSet)
 		})
 		if err != nil {
-			i.Log.Error(err, "unable to wakeup statefulset")
+			i.Log.Error(err, "unable to wakeup statefulset", "name", i.StatefulSet.Name)
 			return nil, err
 		}
 		i.Log.V(1).Info("statefulset waked up", "name", i.StatefulSet.Name)

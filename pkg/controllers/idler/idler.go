@@ -44,7 +44,9 @@ func (o *ObjectIdler) SetReference(ctx context.Context, instanceName string) err
 		o.Log.Info(fmt.Sprintf("Set reference for object %v", o.Object.GetName()))
 
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			o.Get(ctx, types.NamespacedName{Namespace: o.Object.GetNamespace(), Name: o.Object.GetName()}, o.RuntimeObject)
+			if err := o.Get(ctx, types.NamespacedName{Namespace: o.Object.GetNamespace(), Name: o.Object.GetName()}, o.RuntimeObject); err != nil {
+				return err
+			}
 			k8s.AddAnnotation(o.Object, kidlev1beta1.MetadataIdlingResourceReference, instanceName)
 			return o.Update(ctx, o.RuntimeObject)
 		})
@@ -62,7 +64,9 @@ func (o *ObjectIdler) RemoveAnnotations(ctx context.Context) error {
 		o.Log.Info(fmt.Sprintf("Remove annotations for object %v", o.Object.GetName()))
 
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			o.Get(ctx, types.NamespacedName{Namespace: o.Object.GetNamespace(), Name: o.Object.GetName()}, o.RuntimeObject)
+			if err := o.Get(ctx, types.NamespacedName{Namespace: o.Object.GetNamespace(), Name: o.Object.GetName()}, o.RuntimeObject); err != nil {
+				return err
+			}
 			k8s.RemoveAnnotation(o.Object, kidlev1beta1.MetadataIdlingResourceReference)
 			k8s.RemoveAnnotation(o.Object, kidlev1beta1.MetadataPreviousReplicas)
 			k8s.RemoveAnnotation(o.Object, kidlev1beta1.MetadataExpectedState)
