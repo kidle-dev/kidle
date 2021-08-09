@@ -43,11 +43,6 @@ import (
 	"time"
 )
 
-var (
-	deployOwnerKey = ".metadata.controller"
-	apiGVStr       = kidlev1beta1.GroupVersion.String()
-)
-
 // IdlingResourceReconciler reconciles a IdlingResource object
 type IdlingResourceReconciler struct {
 	client.Client
@@ -176,7 +171,7 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 			r.Event(instance,
 				corev1.EventTypeNormal,
 				fmt.Sprintf("Scaling%s", ref.Kind),
-				fmt.Sprintf("WakedUp"))
+				"WakedUp")
 		}
 
 		// Remove object annotations
@@ -227,7 +222,7 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 			r.Event(instance,
 				corev1.EventTypeNormal,
 				fmt.Sprintf("Scaling%s", ref.Kind),
-				fmt.Sprintf("WakedUp"))
+				"WakedUp")
 		}
 		return ctrl.Result{}, nil
 	}
@@ -244,7 +239,7 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 		r.Event(instance,
 			corev1.EventTypeNormal,
 			fmt.Sprintf("Scaling%s", ref.Kind),
-			fmt.Sprintf("Scaled to 0"))
+			"Scaled to 0")
 		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil

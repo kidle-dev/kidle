@@ -29,7 +29,7 @@ func NewCronJobIdler(client client.Client, log logr.Logger, cronjob *batchv1beta
 }
 
 func (i *CronJobIdler) NeedIdle(instance *kidlev1beta1.IdlingResource) bool {
-	return instance.Spec.Idle && *i.CronJob.Spec.Suspend == false
+	return instance.Spec.Idle && !*i.CronJob.Spec.Suspend
 }
 
 func (i *CronJobIdler) NeedWakeup(instance *kidlev1beta1.IdlingResource) bool {
@@ -37,15 +37,18 @@ func (i *CronJobIdler) NeedWakeup(instance *kidlev1beta1.IdlingResource) bool {
 }
 
 func (i *CronJobIdler) Idle(ctx context.Context) error {
-	if *i.CronJob.Spec.Suspend == false {
+	if !*i.CronJob.Spec.Suspend {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			i.Get(ctx, types.NamespacedName{Namespace: i.CronJob.Namespace, Name: i.CronJob.Name}, i.CronJob)
+			if err := i.Get(ctx, types.NamespacedName{Namespace: i.CronJob.Namespace, Name: i.CronJob.Name}, i.CronJob); err != nil {
+				i.Log.Error(err, "unable to get cronjob","name", i.CronJob.Name)
+				return err
+			}
 			k8s.AddAnnotation(&i.CronJob.ObjectMeta, kidlev1beta1.MetadataExpectedState, "true")
 			i.CronJob.Spec.Suspend = pointer.Bool(true)
 			return i.Update(ctx, i.CronJob)
 		})
 		if err != nil {
-			i.Log.Error(err, "unable to suspend cronjob")
+			i.Log.Error(err, "unable to suspend cronjob", "name", i.CronJob.Name)
 			return err
 		}
 		i.Log.V(1).Info("cronjob suspended", "name", i.CronJob.Name)
@@ -58,13 +61,16 @@ func (i *CronJobIdler) Idle(ctx context.Context) error {
 func (i *CronJobIdler) Wakeup(ctx context.Context) (*int32, error) {
 	if *i.CronJob.Spec.Suspend {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			i.Get(ctx, types.NamespacedName{Namespace: i.CronJob.Namespace, Name: i.CronJob.Name}, i.CronJob)
+			if err := i.Get(ctx, types.NamespacedName{Namespace: i.CronJob.Namespace, Name: i.CronJob.Name}, i.CronJob); err != nil {
+				i.Log.Error(err, "unable to get cronjob","name", i.CronJob.Name)
+				return err
+			}
 			k8s.AddAnnotation(&i.CronJob.ObjectMeta, kidlev1beta1.MetadataExpectedState, "false")
 			i.CronJob.Spec.Suspend = pointer.Bool(false)
 			return i.Update(ctx, i.CronJob)
 		})
 		if err != nil {
-			i.Log.Error(err, "unable to wakeup cronjob")
+			i.Log.Error(err, "unable to wakeup cronjob", "name", i.CronJob.Name)
 			return nil, err
 		}
 		i.Log.V(1).Info("cronjob waked up", "name", i.CronJob.Name)

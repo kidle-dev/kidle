@@ -35,7 +35,7 @@ func newIdlingResource(key types.NamespacedName, ref *kidlev1beta1.CrossVersionO
 var _ = Describe("idling/wakeup Cronjobs", func() {
 	const (
 		timeout  = time.Second * 10
-		duration = time.Second * 10
+		//duration = time.Second * 10
 		interval = time.Millisecond * 250
 	)
 	var (

@@ -295,8 +295,8 @@ func (r *IdlingResourceReconciler) createRBAC(ctx context.Context, instance *kid
 		} else {
 			return fmt.Errorf("unable to get rolebinding: %v", err)
 		}
-	} else {
+	}// else {
 		// TODO update if necessary
-	}
+	//}
 	return nil
 }

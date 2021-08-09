@@ -40,14 +40,17 @@ func (i *DeploymentIdler) NeedWakeup(instance *kidlev1beta1.IdlingResource) bool
 func (i *DeploymentIdler) Idle(ctx context.Context) error {
 	if i.Deployment.Spec.Replicas != pointer.Int32(0) {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			i.Get(ctx, types.NamespacedName{Namespace: i.Deployment.Namespace, Name: i.Deployment.Name}, i.Deployment)
+			if err := i.Get(ctx, types.NamespacedName{Namespace: i.Deployment.Namespace, Name: i.Deployment.Name}, i.Deployment); err != nil {
+				i.Log.Error(err, "unable to get deployment","name", i.Deployment.Name)
+				return err
+			}
 			k8s.AddAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas, strconv.Itoa(int(*i.Deployment.Spec.Replicas)))
 			k8s.AddAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataExpectedState, "0")
 			i.Deployment.Spec.Replicas = pointer.Int32(0)
 			return i.Update(ctx, i.Deployment)
 		})
 		if err != nil {
-			i.Log.Error(err, "unable to downscale deployment")
+			i.Log.Error(err, "unable to downscale deployment", "name", i.Deployment.Name)
 			return err
 		}
 		i.Log.V(1).Info("deployment idled", "name", i.Deployment.Name)
@@ -70,13 +73,16 @@ func (i *DeploymentIdler) Wakeup(ctx context.Context) (*int32, error) {
 
 	if i.Deployment.Spec.Replicas != previousReplicas {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			i.Get(ctx, types.NamespacedName{Namespace: i.Deployment.Namespace, Name: i.Deployment.Name}, i.Deployment)
+			if err := i.Get(ctx, types.NamespacedName{Namespace: i.Deployment.Namespace, Name: i.Deployment.Name}, i.Deployment); err != nil {
+				i.Log.Error(err, "unable to get deployment","name", i.Deployment.Name)
+				return err
+			}
 			k8s.AddAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataExpectedState, strconv.Itoa(int(*previousReplicas)))
 			i.Deployment.Spec.Replicas = previousReplicas
 			return i.Update(ctx, i.Deployment)
 		})
 		if err != nil {
-			i.Log.Error(err, "unable to wakeup deployment")
+			i.Log.Error(err, "unable to wakeup deployment", "name", i.Deployment.Name)
 			return nil, err
 		}
 		i.Log.V(1).Info("deployment waked up", "name", i.Deployment.Name)

@@ -17,7 +17,7 @@ func ContainersToMap(containers []corev1.Container) map[string]corev1.Container 
 
 // SetContainer replace a container in an array by finding it by its name
 func SetContainer(containers []corev1.Container, container *corev1.Container) {
-	for k, _ := range containers {
+	for k := range containers {
 		if containers[k].Name == container.Name {
 			containers[k] = *container
 			return
