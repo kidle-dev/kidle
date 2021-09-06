@@ -6,7 +6,7 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: idlingresources.kidle.beroot.org
+  name: idlingresources.kidle.kidle.dev
 spec:
   additionalPrinterColumns:
   - JSONPath: .spec.idle
@@ -18,7 +18,7 @@ spec:
   - JSONPath: .spec.idlingResourceRef.name
     name: RefName
     type: string
-  group: kidle.beroot.org
+  group: kidle.kidle.dev
   names:
     kind: IdlingResource
     listKind: IdlingResourceList

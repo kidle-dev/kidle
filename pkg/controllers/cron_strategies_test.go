@@ -134,7 +134,7 @@ var _ = Describe("cronjob strategy", func() {
 
 		By("Validation of the service account owner reference")
 		Expect(sa.ObjectMeta.OwnerReferences).To(HaveLen(1))
-		Expect(sa.ObjectMeta.OwnerReferences[0].APIVersion).To(Equal("kidle.beroot.org/v1beta1"))
+		Expect(sa.ObjectMeta.OwnerReferences[0].APIVersion).To(Equal("kidle.kidle.dev/v1beta1"))
 		Expect(sa.ObjectMeta.OwnerReferences[0].Kind).To(Equal("IdlingResource"))
 		Expect(sa.ObjectMeta.OwnerReferences[0].Name).To(Equal(irKey.Name))
 		Expect(sa.ObjectMeta.OwnerReferences[0].Controller).To(Equal(pointer.Bool(true)))
@@ -156,14 +156,14 @@ var _ = Describe("cronjob strategy", func() {
 		Expect(role.Rules).To(HaveLen(1))
 		Expect(role.Rules[0]).To(Equal(rbacv1.PolicyRule{
 			Verbs:         []string{"get", "patch", "update"},
-			APIGroups:     []string{"kidle.beroot.org"},
+			APIGroups:     []string{"kidle.kidle.dev"},
 			Resources:     []string{"idlingresources"},
 			ResourceNames: []string{irKey.Name},
 		}))
 
 		By("Validation of the role owner reference")
 		Expect(role.ObjectMeta.OwnerReferences).NotTo(BeEmpty())
-		Expect(role.ObjectMeta.OwnerReferences[0].APIVersion).To(Equal("kidle.beroot.org/v1beta1"))
+		Expect(role.ObjectMeta.OwnerReferences[0].APIVersion).To(Equal("kidle.kidle.dev/v1beta1"))
 		Expect(role.ObjectMeta.OwnerReferences[0].Kind).To(Equal("IdlingResource"))
 		Expect(role.ObjectMeta.OwnerReferences[0].Name).To(Equal(irKey.Name))
 		Expect(role.ObjectMeta.OwnerReferences[0].Controller).To(Equal(pointer.Bool(true)))
@@ -198,7 +198,7 @@ var _ = Describe("cronjob strategy", func() {
 
 		By("Validation of the role binding owner reference")
 		Expect(rb.ObjectMeta.OwnerReferences).NotTo(BeEmpty())
-		Expect(rb.ObjectMeta.OwnerReferences[0].APIVersion).To(Equal("kidle.beroot.org/v1beta1"))
+		Expect(rb.ObjectMeta.OwnerReferences[0].APIVersion).To(Equal("kidle.kidle.dev/v1beta1"))
 		Expect(rb.ObjectMeta.OwnerReferences[0].Kind).To(Equal("IdlingResource"))
 		Expect(rb.ObjectMeta.OwnerReferences[0].Name).To(Equal(irKey.Name))
 		Expect(rb.ObjectMeta.OwnerReferences[0].Controller).To(Equal(pointer.Bool(true)))
@@ -234,7 +234,7 @@ var _ = Describe("cronjob strategy", func() {
 
 		By("Validation of the cronjob owner reference")
 		Expect(cj.ObjectMeta.OwnerReferences).NotTo(BeEmpty())
-		Expect(cj.ObjectMeta.OwnerReferences[0].APIVersion).To(Equal("kidle.beroot.org/v1beta1"))
+		Expect(cj.ObjectMeta.OwnerReferences[0].APIVersion).To(Equal("kidle.kidle.dev/v1beta1"))
 		Expect(cj.ObjectMeta.OwnerReferences[0].Kind).To(Equal("IdlingResource"))
 		Expect(cj.ObjectMeta.OwnerReferences[0].Name).To(Equal(irKey.Name))
 		Expect(cj.ObjectMeta.OwnerReferences[0].Controller).To(Equal(pointer.Bool(true)))

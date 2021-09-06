@@ -1,4 +1,4 @@
-apiVersion: kidle.beroot.org/v1beta1
+apiVersion: kidle.kidle.dev/v1beta1
 kind: IdlingResource
 metadata:
   name: idlingresource-sample
