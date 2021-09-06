@@ -16,7 +16,11 @@ type KidleClient struct {
 	Namespace string
 }
 
-func NewKidleClient(namespaceOverride string) (*KidleClient, error) {
+// NewKidleClient creates a kubernetes client for kidle.
+// It can connect inside a k8s cluster from a pod into its current namespace
+// or outside as a remote client on a specified namespace.
+// If namespace == "", the namespace from the current context is used.
+func NewKidleClient(namespace string) (*KidleClient, error) {
 	var restConfig *rest.Config
 	var err error
 
@@ -24,11 +28,11 @@ func NewKidleClient(namespaceOverride string) (*KidleClient, error) {
 
 	configOverrides := &clientcmd.ConfigOverrides{
 		Context: clientcmdapi.Context{
-			Namespace: namespaceOverride,
+			Namespace: namespace,
 		},
 	}
 	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
-	namespace, _, err := kubeConfig.Namespace()
+	currentNamespace, _, err := kubeConfig.Namespace()
 	if err != nil {
 		return nil, fmt.Errorf("error when getting current namespace: %v", err)
 	}
@@ -47,9 +51,10 @@ func NewKidleClient(namespaceOverride string) (*KidleClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error when creating client: %v", err)
 	}
-	return &KidleClient{Client: client, Namespace: namespace}, nil
+	return &KidleClient{Client: client, Namespace: currentNamespace}, nil
 }
 
+// applyDesiredIdleState make sure that the referenced object has the proper idling state
 func (k *KidleClient) applyDesiredIdleState(idle bool, req *client.ObjectKey) (bool, error) {
 
 	ctx := context.Background()
