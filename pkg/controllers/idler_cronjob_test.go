@@ -19,7 +19,7 @@ func newIdlingResource(key types.NamespacedName, ref *kidlev1beta1.CrossVersionO
 	return &kidlev1beta1.IdlingResource{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "IdlingResource",
-			APIVersion: "kidle.beroot.org/v1beta1", // kidlev1beta1.GroupVersion.String()
+			APIVersion: "kidle.kidle.dev/v1beta1", // kidlev1beta1.GroupVersion.String()
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      key.Name,

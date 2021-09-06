@@ -1,4 +1,4 @@
-domain: beroot.org
+domain: kidle.dev
 repo: github.com/kidle-dev/kidle/pkg
 resources:
 - group: kidle

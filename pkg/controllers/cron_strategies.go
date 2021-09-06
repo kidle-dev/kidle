@@ -237,7 +237,7 @@ func (r *IdlingResourceReconciler) createRBAC(ctx context.Context, instance *kid
 	roleKey := types.NamespacedName{Namespace: instance.Namespace, Name: roleName}
 	policyRule := rbacv1.PolicyRule{
 		Verbs:         []string{"get", "patch", "update"},
-		APIGroups:     []string{"kidle.beroot.org"},
+		APIGroups:     []string{"kidle.kidle.dev"},
 		Resources:     []string{"idlingresources"},
 		ResourceNames: []string{instance.Name},
 	}

@@ -23,16 +23,16 @@ const (
 	IdlingResources = "idlingresources"
 
 	// IdlingResourceFinalizerName is the name of the idlingresource finalizer
-	IdlingResourceFinalizerName = "idlingresource.finalizers.kidle.beroot.org"
+	IdlingResourceFinalizerName = "idlingresource.finalizers.kidle.kidle.dev"
 
 	// TODO
-	MetadataIdlingResourceReference = "kidle.beroot.org/idling-resource-reference"
+	MetadataIdlingResourceReference = "kidle.kidle.dev/idling-resource-reference"
 
 	// TODO
-	MetadataPreviousReplicas = "kidle.beroot.org/previous-replicas"
+	MetadataPreviousReplicas = "kidle.kidle.dev/previous-replicas"
 
 	// TODO
-	MetadataExpectedState = "kidle.beroot.org/expected-state"
+	MetadataExpectedState = "kidle.kidle.dev/expected-state"
 )
 
 // IdlingResourceSpec defines the desired state of IdlingResource

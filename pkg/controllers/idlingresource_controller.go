@@ -51,8 +51,8 @@ type IdlingResourceReconciler struct {
 	record.EventRecorder
 }
 
-// +kubebuilder:rbac:groups=kidle.beroot.org,resources=idlingresources,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=kidle.beroot.org,resources=idlingresources/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=kidle.kidle.dev,resources=idlingresources,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=kidle.kidle.dev,resources=idlingresources/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get
 
