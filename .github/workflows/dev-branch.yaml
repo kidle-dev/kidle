@@ -49,6 +49,7 @@ jobs:
       uses: RyanSiu1995/kubebuilder-action@v1.2.1
       with:
         version: 2.3.1
+        args: --timeout=1m
 
     - name: Install ginkgo
       run: make ginkgo
