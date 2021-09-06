@@ -46,7 +46,7 @@ jobs:
       continue-on-error: true
 
     - name: Install kubebuilder
-      uses: RyanSiu1995/kubebuilder-action@v1.1
+      uses: RyanSiu1995/kubebuilder-action@v1.2.1
       with:
         version: 2.3.1
 
