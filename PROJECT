@@ -1,5 +1,5 @@
 domain: beroot.org
-repo: github.com/orphaner/kidle/pkg
+repo: github.com/kidle-dev/kidle/pkg
 resources:
 - group: kidle
   kind: IdlingResource

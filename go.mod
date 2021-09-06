@@ -1,4 +1,4 @@
-module github.com/orphaner/kidle
+module github.com/kidle-dev/kidle
 
 go 1.16
 

@@ -3,9 +3,9 @@ package idler
 import (
 	"context"
 	"github.com/go-logr/logr"
-	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
-	"github.com/orphaner/kidle/pkg/utils/k8s"
-	"github.com/orphaner/kidle/pkg/utils/pointer"
+	kidlev1beta1 "github.com/kidle-dev/kidle/pkg/api/v1beta1"
+	"github.com/kidle-dev/kidle/pkg/utils/k8s"
+	"github.com/kidle-dev/kidle/pkg/utils/pointer"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
