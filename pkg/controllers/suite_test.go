@@ -31,7 +31,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
+	kidlev1beta1 "github.com/kidle-dev/kidle/pkg/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 

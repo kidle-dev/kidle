@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
+	kidlev1beta1 "github.com/kidle-dev/kidle/pkg/api/v1beta1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

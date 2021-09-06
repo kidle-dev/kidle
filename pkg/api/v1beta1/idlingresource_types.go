@@ -15,7 +15,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/orphaner/kidle/pkg/utils/array"
+	"github.com/kidle-dev/kidle/pkg/utils/array"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

@@ -26,8 +26,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	kidlev1beta1 "github.com/orphaner/kidle/pkg/api/v1beta1"
-	"github.com/orphaner/kidle/pkg/controllers"
+	kidlev1beta1 "github.com/kidle-dev/kidle/pkg/api/v1beta1"
+	"github.com/kidle-dev/kidle/pkg/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
