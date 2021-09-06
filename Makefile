@@ -47,6 +47,8 @@ deploy-debug: manifests
 	cd config/manager && kustomize edit set image controller=${IMG_DEBUG}
 	kustomize build config/debug | kubectl apply -f -
 
+manifests:
+	cd cmd/operator && make generate
 
 # Generate code
 generate: controller-gen
