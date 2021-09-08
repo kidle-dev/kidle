@@ -1,7 +1,16 @@
 domain: kidle.dev
-repo: github.com/kidle-dev/kidle/pkg
+layout:
+- go.kubebuilder.io/v3
+projectName: kidle
+repo: kidle.dev/kidle
 resources:
-- group: kidle
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: kidle.dev
+  group: kidle
   kind: IdlingResource
+  path: kidle.dev/kidle/api/v1beta1
   version: v1beta1
-version: "2"
+version: "3"
