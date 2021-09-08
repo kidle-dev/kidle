@@ -2,16 +2,17 @@ package controllers
 
 import (
 	"context"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	kidlev1beta1 "github.com/kidle-dev/kidle/pkg/api/v1beta1"
 	"github.com/kidle-dev/kidle/pkg/utils/k8s"
 	"github.com/kidle-dev/kidle/pkg/utils/pointer"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"time"
 )
 
@@ -133,7 +134,9 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
 
 			ir.Spec.Idle = true
-			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return k8sClient.Update(ctx, ir)
+			})).Should(Succeed())
 
 			By("Checking that Suspend == true")
 			Eventually(func() (*bool, error) {

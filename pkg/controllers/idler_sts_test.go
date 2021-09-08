@@ -2,15 +2,16 @@ package controllers
 
 import (
 	"context"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	kidlev1beta1 "github.com/kidle-dev/kidle/pkg/api/v1beta1"
 	"github.com/kidle-dev/kidle/pkg/utils/k8s"
 	"github.com/kidle-dev/kidle/pkg/utils/pointer"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"time"
 )
 
@@ -123,7 +124,9 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
 
 			ir.Spec.Idle = true
-			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return k8sClient.Update(ctx, ir)
+			})).Should(Succeed())
 
 			By("Checking that Replicas == 0")
 			Eventually(func() (*int32, error) {

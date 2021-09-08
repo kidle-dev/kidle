@@ -40,21 +40,12 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+      if: ${{ !env.ACT }}
 
     - uses: satackey/action-docker-layer-caching@v0.0.11
       # Ignore the failure of a step and avoid terminating the job.
       continue-on-error: true
-
-    - name: Install kubebuilder
-      uses: RyanSiu1995/kubebuilder-action@v1.2.1
-      with:
-        version: 2.3.1
-        args: --timeout=1m
-
-    - name: Install ginkgo
-      run: make ginkgo
-      shell: bash
-      working-directory: ./cmd/operator
+      if: ${{ !env.ACT }}
 
     - name: Run ginkgo tests
       continue-on-error: true
@@ -62,7 +53,7 @@ jobs:
       shell: bash
 
     - name: Build code
-      run: make WHAT=operator
+      run: make WHAT=operator build
       shell: bash
 
     - name: Login to DockerHub
@@ -115,13 +106,14 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('cmd/kidlectl/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+      if: ${{ !env.ACT }}
 
     - uses: satackey/action-docker-layer-caching@v0.0.11
       # Ignore the failure of a step and avoid terminating the job.
       continue-on-error: true
 
     - name: Build code
-      run: make WHAT=kidlectl
+      run: make WHAT=kidlectl build
       shell: bash
 
     - name: Login to DockerHub

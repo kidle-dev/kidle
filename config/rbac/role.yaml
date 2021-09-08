@@ -7,24 +7,6 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments/status
-  verbs:
-  - get
-- apiGroups:
   - kidle.kidle.dev
   resources:
   - idlingresources
@@ -36,6 +18,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - kidle.kidle.dev
+  resources:
+  - idlingresources/finalizers
+  verbs:
+  - update
 - apiGroups:
   - kidle.kidle.dev
   resources:
