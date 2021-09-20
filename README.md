@@ -6,18 +6,41 @@ Kidle is a kubernetes idling feature to automatically idle or wakeup workloads.
 
 Main features:
 
-[x] idle and wakeup Deployments, StatefulSets and CronJobs
-[-] idle and wakeup at specified time
-[-] shutdown after some idle time
-[-] automatic wakeup on call
-[-] fancy UI
+- [x] idle and wakeup Deployments, StatefulSets and CronJobs
+- [x] idle and wakeup at specified time
+- [-] shutdown after some idle time
+- [-] automatic wakeup on call
+- [-] fancy UI
 
+## Demo
 
+[![asciicast](https://asciinema.org/a/ucJjxq0BmygzZdjTozNgbbf6o.svg)](https://asciinema.org/a/ucJjxq0BmygzZdjTozNgbbf6o)
+
+Demo commands:
+```bash
+# let's create a deployment
+kubectl create deploy --image=stefanprodan/podinfo podinfo
+
+# create an IdlingResource for that deployment
+bat 01-manual-idlingresource.yaml
+kubectl apply -f 01-manual-idlingresource.yaml
+
+# display kidle status
+kubectl get idlingresources
+
+# idle manually the deployment then watch the result
+kubectl edit ir/podinfo
+kubectl get ir,deploy
+
+# use kidlectl to idle or wakeup more easily
+kidlectl wakeup podinfo
+kubectl get ir,deploy
+ 
+```
 
 ## Deployment
 
-### Deploying with Helm
-
+For now, kidle is in early stages. When ready, Kidle will be deployed using a helm chart or kustomize.
 
 ## Development
 
@@ -27,12 +50,4 @@ Main features:
 make k3s-registry k3s-create k3s-kubeconfig
 make install
 make run
-```
-
-## Building/Pushing the operator image
-
-```shell
-export repo=kidle #replace with yours
-make docker-build IMG=$repo/kidle-operator:latest
-make docker-push IMG=$repo/kidle-operator:latest
 ```

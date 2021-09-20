@@ -1,0 +1,14 @@
+apiVersion: kidle.kidle.dev/v1beta1
+kind: IdlingResource
+metadata:
+  namespace: kidle-demo
+  name: podinfo
+spec:
+  # Reference of the workload to idle
+  idlingResourceRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: podinfo
+
+  # Idle or not?
+  idle: false

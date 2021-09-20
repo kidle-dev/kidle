@@ -1,0 +1,25 @@
+apiVersion: kidle.kidle.dev/v1beta1
+kind: IdlingResource
+metadata:
+  namespace: kidle-demo
+  name: scheduled-idling
+spec:
+  # Reference of the workload to idle
+  idlingResourceRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: podinfo
+
+  # Idle or not?
+  idle: false
+
+  # Scheduled idle time using cronjob
+  idlingStrategy:
+    cronStrategy:
+      schedule: "*/2 * * * *"
+
+  # Scheduled wakeup time using cronjob
+  wakeupStrategy:
+    cronStrategy:
+      schedule: "1-59/2 * * * *"
+<
