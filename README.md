@@ -42,12 +42,6 @@ kubectl get ir,deploy
 
 For now, kidle is in early stages. When ready, Kidle will be deployed using a helm chart or kustomize.
 
-## Development
+## Documentation
 
-## Running the operator locally
-
-```shell
-make k3s-registry k3s-create k3s-kubeconfig
-make install
-make run
-```
+Here is a [user guide](docs/userguide.md).
