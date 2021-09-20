@@ -40,6 +40,9 @@ There are several idling strategies:
 # start a local k3s cluster
 make k3s-registry k3s-create k3s-kubeconfig
 
+# set proper KUBECONFIG env var
+export KUBECONFIG=$(pwd)/kube.config
+
 # Install the CRD
 make install
 
