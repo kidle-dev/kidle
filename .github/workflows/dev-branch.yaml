@@ -52,6 +52,7 @@ jobs:
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
+      if: ${{ !env.ACT }}
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
@@ -68,7 +69,7 @@ jobs:
         context: .
         file: ./cmd/operator/Dockerfile
         push: true
-        tags: kidle/kidle-operator:${{env.GITHUB_REF_SLUG}}
+        tags: kidledev/kidle-operator:${{env.GITHUB_REF_SLUG}}
 
   build-kidlectl:
     runs-on: ubuntu-latest
@@ -111,6 +112,7 @@ jobs:
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
+      if: ${{ !env.ACT }}
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
@@ -127,7 +129,7 @@ jobs:
         context: .
         file: ./cmd/kidlectl/Dockerfile
         push: true
-        tags: kidle/kidlectl:${{env.GITHUB_REF_SLUG}}
+        tags: kidledev/kidlectl:${{env.GITHUB_REF_SLUG}}
 
   golangci:
     runs-on: ubuntu-latest
