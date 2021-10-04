@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/jessevdk/go-flags"
 	"github.com/kidle-dev/kidle/pkg/version"
@@ -104,6 +105,10 @@ func main() {
 		}
 
 	case "version":
-		fmt.Println(version.Version)
+		b, err := json.Marshal(version.GetVersionInfos())
+		if err != nil {
+			fmt.Println(version.Version)
+		}
+		fmt.Println(string(b))
 	}
 }

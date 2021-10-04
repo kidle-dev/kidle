@@ -12,6 +12,7 @@ SHELL := /bin/bash
 PROJECT_DIR := $(shell dirname $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST)))))
 BIN_DIR := $(PROJECT_DIR)/bin
 ENVTEST_ASSETS_DIR=$(BIN_DIR)/test
+TAG?=$(shell git rev-parse --short HEAD)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 define go-get-tool
@@ -48,7 +49,7 @@ else
 	BUILD_REVISION=$(GITHUB_SHA)
 endif
 
-KIDLE_VERSION_PKG=github.com/kidle-dev/kidle/pkg/version
+KIDLE_VERSION_PKG=github.com/kidle-dev/kidle/pkg
 
 # The ldflags for the go build process to set the version related data.
 GO_BUILD_LDFLAGS=\
