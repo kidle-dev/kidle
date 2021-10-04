@@ -31,9 +31,9 @@ endef
 GOOS?=$(shell go env GOOS)
 GOARCH?=$(shell go env GOARCH)
 ifeq ($(GOARCH),arm)
-	ARCH=armv7
+	FROM_ARCH=armv7
 else
-	ARCH=$(GOARCH)
+	FROM_ARCH=$(GOARCH)
 endif
 
 VERSION?=$(shell cat $(PROJECT_DIR)/VERSION | tr -d " \t\n\r")

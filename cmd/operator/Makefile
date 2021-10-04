@@ -43,19 +43,19 @@ docker: docker-build docker-push ## Build and push the docker image.
 
 docker-build: build ## Build the docker image.
 	cd ../../; docker build \
-		--build-arg ARCH=$(ARCH) \
-		--build-arg OS=$(GOOS) \
-		--build-arg BUILD_REVISION=$(BUILD_REVISION) \
-		--build-arg BUILD_USER=$(BUILD_USER) \
-		--build-arg BUILD_DATE=$(BUILD_DATE) \
-		--build-arg BUILD_BRANCH=$(BUILD_BRANCH) \
-		--build-arg VERSION=$(VERSION) \
-		-t ${IMG_OPERATOR}:${TAG}-${ARCH} \
+		--build-arg ARCH=${FROM_ARCH} \
+		--build-arg OS=${GOOS} \
+		--build-arg BUILD_REVISION=${BUILD_REVISION} \
+		--build-arg BUILD_USER=${BUILD_USER} \
+		--build-arg BUILD_DATE=${BUILD_DATE} \
+		--build-arg BUILD_BRANCH=${BUILD_BRANCH} \
+		--build-arg VERSION=${VERSION} \
+		-t ${IMG_OPERATOR}:${TAG}-${GOARCH} \
 		-f cmd/operator/Dockerfile \
 		.
 
 docker-push: ## Push the docker image.
-	docker push ${IMG_OPERATOR}:${TAG}-${ARCH}
+	docker push ${IMG_OPERATOR}:${TAG}-${GOARCH}
 
 build-multi-arch-image: ## Multi arch docker image build
 	IMAGE=${IMG_OPERATOR} TAG=${TAG} ../../hack/push-docker-image.sh
