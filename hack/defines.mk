@@ -48,7 +48,7 @@ else
 	BUILD_REVISION=$(GITHUB_SHA)
 endif
 
-KIDLE_VERSION_PKG=github.com/prometheus/common
+KIDLE_VERSION_PKG=github.com/kidle-dev/kidle/pkg/version
 
 # The ldflags for the go build process to set the version related data.
 GO_BUILD_LDFLAGS=\

@@ -29,7 +29,7 @@ d: docker ## -> docker
 docker: docker-build docker-push ## Build and push the docker image
 
 docker-build: build ## Build the docker image
-	cd ../../; docker build --build-arg ARCH=$(ARCH) --build-arg OS=$(GOOS) . -t ${IMG_KIDLECTL}:${TAG}-${ARCH} -f cmd/kidlectl/Dockerfile
+	cd ../../; docker build --build-arg ARCH=$(ARCH) --build-arg OS=$(GOOS) -t ${IMG_KIDLECTL}:${TAG}-${ARCH} -f cmd/kidlectl/Dockerfile .
 
 docker-push: ## Push the docker image
 	docker push ${IMG_KIDLECTL}:${TAG}-${ARCH}

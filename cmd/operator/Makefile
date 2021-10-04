@@ -48,7 +48,7 @@ docker-push: ## Push the docker image.
 	docker push ${IMG_OPERATOR}:${TAG}-${ARCH}
 
 build-multi-arch-image: ## Multi arch docker image build
-	IMAGE=${IMG_KIDLECTL} TAG=${TAG} ../../hack/push-docker-image.sh
+	IMAGE=${IMG_OPERATOR} TAG=${TAG} ../../hack/push-docker-image.sh
 
 ##@ Remote debug
 dd: docker-debug ## -> docker-debug
