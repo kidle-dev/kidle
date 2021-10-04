@@ -29,8 +29,7 @@ export DOCKER_CLI_EXPERIMENTAL=enabled
 docker manifest create -a "${IMAGE}:${TAG}" \
         "${IMAGE}:${TAG}-amd64" \
         "${IMAGE}:${TAG}-arm64" \
-        "${IMAGE}:${TAG}-arm" \
-        "${IMAGE}:${TAG}-ppc64le"
+        "${IMAGE}:${TAG}-arm"
 
 # Annotate to set which image is build for which CPU architecture
 for arch in $CPU_ARCHS; do
