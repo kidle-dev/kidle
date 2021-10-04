@@ -16,7 +16,7 @@ manifests:  ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefi
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	cd cmd/operator && make generate
 
-lint: golangci-lint
+lint: golangci-lint ## Run golangci-lint globally
 	$(GOLANGCI_LINT) run
 
 ##@ Build
