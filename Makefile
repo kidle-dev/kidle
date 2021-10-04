@@ -23,6 +23,12 @@ lint: golangci-lint ## Run golangci-lint globally
 run: ## Run the $WHAT target
 	hack/make-rules/build.sh run $(WHAT)
 
+fmt: ## Fmt the $WHAT target
+	hack/make-rules/build.sh fmt $(WHAT)
+
+vet: ## Vet the $WHAT target
+	hack/make-rules/build.sh vet $(WHAT)
+
 build: ## Build the $WHAT target.
 	hack/make-rules/build.sh build $(WHAT)
 
