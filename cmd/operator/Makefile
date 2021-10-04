@@ -35,7 +35,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 run: generate fmt vet manifests ## Run against the configured Kubernetes cluster in ~/.kube/config
 	go run ./main.go
 
-build: generate fmt vet ## Build manager binary.
+build: generate ## Build manager binary.
 	go build -o bin/operator main.go
 
 d: docker ## -> docker.

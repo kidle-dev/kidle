@@ -19,7 +19,7 @@ vet: ## Run go vet against code
 
 
 ##@ Build
-build: fmt vet ## Build kidlectl binary
+build: ## Build kidlectl binary
 	$(GO_BUILD_RECIPE) -o bin/kidlectl .
 
 run: fmt vet ## Run kidlectl

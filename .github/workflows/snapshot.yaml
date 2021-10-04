@@ -57,6 +57,10 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
+    - name: "fmt & vet"
+      run: |
+        make WHAT=operator fmt vet
+
     - name: "Build and Push multi arch Operator Image"
       run: |
         TAG=${{env.GITHUB_REF_SLUG}} make WHAT=operator build-multi-arch-image
@@ -106,6 +110,10 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+    - name: "fmt & vet"
+      run: |
+        make WHAT=kidlectl fmt vet
 
     - name: "Build and Push multi arch kidlectl Image"
       run: |
