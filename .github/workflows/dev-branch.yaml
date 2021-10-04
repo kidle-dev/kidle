@@ -50,10 +50,6 @@ jobs:
       run: make WHAT=operator gtest
       shell: bash
 
-    - name: Build code
-      run: make WHAT=operator build
-      shell: bash
-
     - name: Login to DockerHub
       uses: docker/login-action@v1
       with:
@@ -112,10 +108,6 @@ jobs:
     - uses: satackey/action-docker-layer-caching@v0.0.11
       # Ignore the failure of a step and avoid terminating the job.
       continue-on-error: true
-
-    - name: Build code
-      run: make WHAT=kidlectl build
-      shell: bash
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
