@@ -1,7 +1,7 @@
 include ../../hack/defines.mk
 
 # Image URL to use all building/pushing image targets
-IMG_OPERATOR ?= kidle-operator:latest
+IMG_OPERATOR ?= kidledev/kidle-operator
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
@@ -41,11 +41,14 @@ build: generate fmt vet ## Build manager binary.
 d: docker ## -> docker.
 docker: docker-build docker-push ## Build and push the docker image.
 
-docker-build: test ## Build the docker image.
-	cd ../../; docker build . -t ${IMG_OPERATOR} -f cmd/operator/Dockerfile
+docker-build: build ## Build the docker image.
+	cd ../../; docker build --build-arg ARCH=$(ARCH) --build-arg OS=$(GOOS) -t ${IMG_OPERATOR}:${TAG}-${ARCH} -f cmd/operator/Dockerfile .
 
 docker-push: ## Push the docker image.
-	docker push ${IMG_OPERATOR}
+	docker push ${IMG_OPERATOR}:${TAG}-${ARCH}
+
+build-multi-arch-image: ## Multi arch docker image build
+	IMAGE=${IMG_KIDLECTL} TAG=${TAG} ../../hack/push-docker-image.sh
 
 ##@ Remote debug
 dd: docker-debug ## -> docker-debug

@@ -26,6 +26,45 @@ rm -rf $$TMP_DIR ;\
 }
 endef
 
+
+GOOS?=$(shell go env GOOS)
+GOARCH?=$(shell go env GOARCH)
+ifeq ($(GOARCH),arm)
+	ARCH=armv7
+else
+	ARCH=$(GOARCH)
+endif
+
+VERSION?=$(shell cat $(PROJECT_DIR)/VERSION | tr -d " \t\n\r")
+BUILD_DATE=$(shell date +"%Y%m%d-%T")
+# source: https://docs.github.com/en/free-pro-team@latest/actions/reference/environment-variables#default-environment-variables
+ifndef GITHUB_ACTIONS
+	BUILD_USER?=$(USER)
+	BUILD_BRANCH?=$(shell git branch --show-current)
+	BUILD_REVISION?=$(shell git rev-parse --short HEAD)
+else
+	BUILD_USER=Action-Run-ID-$(GITHUB_RUN_ID)
+	BUILD_BRANCH=$(GITHUB_REF:refs/heads/%=%)
+	BUILD_REVISION=$(GITHUB_SHA)
+endif
+
+KIDLE_VERSION_PKG=github.com/prometheus/common
+
+# The ldflags for the go build process to set the version related data.
+GO_BUILD_LDFLAGS=\
+	-s \
+	-X $(KIDLE_VERSION_PKG)/version.Revision=$(BUILD_REVISION)  \
+	-X $(KIDLE_VERSION_PKG)/version.BuildUser=$(BUILD_USER) \
+	-X $(KIDLE_VERSION_PKG)/version.BuildDate=$(BUILD_DATE) \
+	-X $(KIDLE_VERSION_PKG)/version.Branch=$(BUILD_BRANCH) \
+	-X $(KIDLE_VERSION_PKG)/version.Version=$(VERSION)
+
+GO_BUILD_RECIPE=\
+	env GOOS=$(GOOS) \
+	GOARCH=$(GOARCH) \
+	CGO_ENABLED=0 \
+	go build -ldflags="$(GO_BUILD_LDFLAGS)"
+
 ##@ Common commands
 KUSTOMIZE = $(BIN_DIR)/kustomize
 kustomize: ## Download kustomize locally if necessary.

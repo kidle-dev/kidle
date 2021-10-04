@@ -26,6 +26,9 @@ run: ## Run the $WHAT target
 build: ## Build the $WHAT target.
 	hack/make-rules/build.sh build $(WHAT)
 
+build-multi-arch-image: ## Multi arch build the $WHAT target.
+	hack/make-rules/build.sh build-multi-arch-image $(WHAT)
+
 d: docker ## -> docker
 docker: ## Build and push the docker image of the $WHAT target.
 	hack/make-rules/build.sh docker $(WHAT)

@@ -1,8 +1,8 @@
 include ../../hack/defines.mk
 
 # Image URL to use all building/pushing image targets
-IMG_KIDLECTL ?= kidle/kidlectl:latest
-
+IMG_KIDLECTL ?= kidledev/kidlectl
+TAG?=$(shell git rev-parse --short HEAD)
 
 ##@ Development
 gtest: ginkgo ## Run ginkgo tests
@@ -20,16 +20,19 @@ vet: ## Run go vet against code
 
 ##@ Build
 build: fmt vet ## Build kidlectl binary
-	go build -o bin/kidlectl .
+	$(GO_BUILD_RECIPE) -o bin/kidlectl .
 
 run: fmt vet ## Run kidlectl
-	go run ./main.go
+	go run ./*.go
 
 d: docker ## -> docker
 docker: docker-build docker-push ## Build and push the docker image
 
-docker-build: test ## Build the docker image
-	cd ../../; docker build . -t ${IMG_KIDLECTL} -f cmd/kidlectl/Dockerfile
+docker-build: build ## Build the docker image
+	cd ../../; docker build --build-arg ARCH=$(ARCH) --build-arg OS=$(GOOS) . -t ${IMG_KIDLECTL}:${TAG}-${ARCH} -f cmd/kidlectl/Dockerfile
 
 docker-push: ## Push the docker image
-	docker push ${IMG_KIDLECTL}
+	docker push ${IMG_KIDLECTL}:${TAG}-${ARCH}
+
+build-multi-arch-image: ## Multi arch docker image build
+	IMAGE=${IMG_KIDLECTL} TAG=${TAG} ../../hack/push-docker-image.sh

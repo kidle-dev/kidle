@@ -57,19 +57,9 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-
-    - name: "Build and Push Operator Image"
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./cmd/operator/Dockerfile
-        push: true
-        tags: kidledev/kidle-operator:${{env.GITHUB_REF_SLUG}}
+    - name: "Build and Push multi arch Operator Image"
+      run: |
+        TAG=${{env.GITHUB_REF_SLUG}} make WHAT=operator build-multi-arch-image
 
   build-kidlectl:
     runs-on: ubuntu-latest
@@ -117,19 +107,9 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-
-    - name: "Build and Push kidlectl"
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./cmd/kidlectl/Dockerfile
-        push: true
-        tags: kidledev/kidlectl:${{env.GITHUB_REF_SLUG}}
+    - name: "Build and Push multi arch kidlectl Image"
+      run: |
+        TAG=${{env.GITHUB_REF_SLUG}} make WHAT=kidlectl build-multi-arch-image
 
   golangci:
     runs-on: ubuntu-latest
