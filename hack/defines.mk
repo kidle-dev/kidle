@@ -21,7 +21,7 @@ TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2)" ;\
-GOBIN=$(BIN_DIR) go get $(2) ;\
+GOBIN=$(BIN_DIR) go install $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
@@ -38,6 +38,10 @@ controller-gen: ## Download controller-gen locally if necessary.
 GINKGO = $(BIN_DIR)/ginkgo
 ginkgo: ## Download ginkgo locally if necessary.
 	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo@v1.16.4)
+
+GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
+golangci-lint: ## Download golangci-lint locally if necessary.
+	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1)
 
 
 ##@ General
@@ -65,3 +69,4 @@ env: ## Display Makefile environment variables
 	@echo KUSTOMIZE=$(KUSTOMIZE)
 	@echo CONTROLLER_GEN=$(CONTROLLER_GEN)
 	@echo GINKGO=$(GINKGO)
+	@echo GOLANGCI_LINT=$(GOLANGCI_LINT)
