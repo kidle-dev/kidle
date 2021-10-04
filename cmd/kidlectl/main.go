@@ -108,6 +108,7 @@ func main() {
 		b, err := json.Marshal(version.GetVersionInfos())
 		if err != nil {
 			fmt.Println(version.Version)
+			return
 		}
 		fmt.Println(string(b))
 	}
