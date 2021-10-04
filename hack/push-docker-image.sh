@@ -15,12 +15,7 @@ set -e
 # only exit with zero if all commands of the pipeline exit successfully
 set -o pipefail
 
-CPU_ARCHS="amd64 arm64 arm ppc64le"
-#WHAT="operator,kidlectl"
-#IMAGES="kidledev/kidle-operator kidledev/kidlectl"
-
-# Figure out if current commit is tagged
-#export TAG="${GITHUB_REF_SLUG##*/}"
+CPU_ARCHS="amd64 arm64 arm"
 
 
 # Build images
