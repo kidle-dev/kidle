@@ -130,11 +130,12 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 
 		It("Should suspend the CronJob", func() {
 			By("Idling the cronjob")
-			ir := &kidlev1beta1.IdlingResource{}
-			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
-
-			ir.Spec.Idle = true
-			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				ir := &kidlev1beta1.IdlingResource{}
+				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
+					return err
+				}
+				ir.Spec.Idle = true
 				return k8sClient.Update(ctx, ir)
 			})).Should(Succeed())
 
@@ -169,11 +170,14 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 		})
 
 		It("Should wakeup the CronJob", func() {
-			ir := &kidlev1beta1.IdlingResource{}
-			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
-
-			ir.Spec.Idle = false
-			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				ir := &kidlev1beta1.IdlingResource{}
+				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
+					return err
+				}
+				ir.Spec.Idle = false
+				return k8sClient.Update(ctx, ir)
+			})).Should(Succeed())
 
 			// We'll need to wait until the controller has waked up the CronJob
 			Eventually(func() (*bool, error) {
