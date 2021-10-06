@@ -148,7 +148,7 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 
 			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 				cj := &batchv1beta1.CronJob{}
-				if err := k8sClient.Get(ctx, irKey, cj); err != nil {
+				if err := k8sClient.Get(ctx, cronJobKey, cj); err != nil {
 					return err
 				}
 				cj.Spec.Suspend = pointer.Bool(false)
