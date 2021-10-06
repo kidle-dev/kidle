@@ -45,11 +45,6 @@ jobs:
       continue-on-error: true
       if: ${{ !env.ACT }}
 
-    - name: Run ginkgo tests
-      continue-on-error: true
-      run: make WHAT=operator gtest
-      shell: bash
-
     - name: Login to DockerHub
       uses: docker/login-action@v1
       if: ${{ !env.ACT }}
@@ -118,6 +113,42 @@ jobs:
     - name: "Build and Push multi arch kidlectl Image"
       run: |
         TAG=${{env.GITHUB_REF_SLUG}} make WHAT=kidlectl build-multi-arch-image
+
+  ginkgo-tests:
+    runs-on: ubuntu-latest
+    name: ginkgo tests
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.16
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Cache
+      uses: actions/cache@v2
+      with:
+        # In order:
+        # * Module download cache
+        # * Build cache (Linux)
+        # * Build cache (Mac)
+        # * Build cache (Windows)
+        path: |
+          ~/go/pkg/mod
+          ~/go/bin
+          ~/.cache/go-build
+          ~/Library/Caches/go-build
+          %LocalAppData%\go-build
+        key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+      if: ${{ !env.ACT }}
+
+    - name: Run ginkgo tests
+      run: make WHAT=operator gtest
+      shell: bash
 
   golangci:
     runs-on: ubuntu-latest
