@@ -120,13 +120,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 
 		It("Should idle the StatefulSet", func() {
 			By("Idling the statefulset")
-			ir := &kidlev1beta1.IdlingResource{}
-			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
-
-			ir.Spec.Idle = true
-			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, true)).Should(Succeed())
 
 			By("Checking that Replicas == 0")
 			Eventually(func() (*int32, error) {
@@ -141,11 +135,15 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 
 		It("Should watch the StatefulSet", func() {
 			By("Trying to update replicas on a idled object")
-			s := &appsv1.StatefulSet{}
-			Expect(k8sClient.Get(ctx, stsKey, s)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				sts := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, stsKey, sts); err != nil {
+					return err
+				}
+				sts.Spec.Replicas = pointer.Int32(1)
+				return k8sClient.Update(ctx, sts)
+			})).Should(Succeed())
 
-			s.Spec.Replicas = pointer.Int32(1)
-			Expect(k8sClient.Update(ctx, s)).Should(Succeed())
 
 			By("Checking that Replicas still equals to 0")
 			Eventually(func() (*int32, error) {
@@ -159,11 +157,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 		})
 
 		It("Should wakeup the StatefulSet", func() {
-			ir := &kidlev1beta1.IdlingResource{}
-			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
-
-			ir.Spec.Idle = false
-			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
 			// We'll need to wait until the controller has waked up the StatefulSet
 			Eventually(func() (*int32, error) {
@@ -177,17 +171,16 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 		})
 
 		It("Should wakeup the StatefulSet to previous replicas", func() {
-			ir := &kidlev1beta1.IdlingResource{}
-			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
-			ir.Spec.Idle = false
-			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
-
-			sts := &appsv1.StatefulSet{}
-			Expect(k8sClient.Get(ctx, stsKey, sts)).Should(Succeed())
-
-			sts.Spec.Replicas = pointer.Int32(2)
-			Expect(k8sClient.Update(ctx, sts)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				sts := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, stsKey, sts); err != nil {
+					return err
+				}
+				sts.Spec.Replicas = pointer.Int32(2)
+				return k8sClient.Update(ctx, sts)
+			})).Should(Succeed())
 
 			Eventually(func() (*int32, error) {
 				sts := &appsv1.StatefulSet{}
@@ -198,8 +191,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 				return sts.Spec.Replicas, nil
 			}, timeout, interval).Should(Equal(pointer.Int32(2)))
 
-			ir.Spec.Idle = true
-			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, true)).Should(Succeed())
 
 			// We'll need to wait until the controller has idled the StatefulSet
 			By("idling")
@@ -212,8 +204,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 				return sts.Spec.Replicas, nil
 			}, timeout, interval).Should(Equal(pointer.Int32(0)))
 
-			ir.Spec.Idle = false
-			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
 			// We'll need to wait until the controller has waked up the StatefulSet
 			By("waking up")
@@ -251,7 +242,14 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 			Expect(k8s.HasAnnotation(&sts.ObjectMeta, kidlev1beta1.MetadataExpectedState)).ShouldNot(BeTrue())
 
 			By("checking the StatefulSet has been scaled up")
-			Expect(sts.Spec.Replicas).Should(Equal(pointer.Int32(2)))
+			Eventually(func() (*int32, error) {
+				sts := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, stsKey, sts)
+				if err != nil {
+					return nil, err
+				}
+				return sts.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(2)))
 		})
 	})
 })

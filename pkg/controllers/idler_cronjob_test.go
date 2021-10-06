@@ -35,13 +35,13 @@ func newIdlingResource(key types.NamespacedName, ref *kidlev1beta1.CrossVersionO
 
 var _ = Describe("idling/wakeup Cronjobs", func() {
 	const (
-		timeout  = time.Second * 10
+		timeout = time.Second * 10
 		//duration = time.Second * 10
 		interval = time.Millisecond * 250
 	)
 	var (
 		irKey = types.NamespacedName{Name: "ir-idler-cronjob", Namespace: "default"}
-		ctx = context.Background()
+		ctx   = context.Background()
 	)
 
 	Context("CronJob suite", func() {
@@ -130,13 +130,7 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 
 		It("Should suspend the CronJob", func() {
 			By("Idling the cronjob")
-			ir := &kidlev1beta1.IdlingResource{}
-			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
-
-			ir.Spec.Idle = true
-			Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, true)).Should(Succeed())
 
 			By("Checking that Suspend == true")
 			Eventually(func() (*bool, error) {
@@ -151,11 +145,15 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 
 		It("Should watch the CronJob", func() {
 			By("Trying to update suspend field on a idled object")
-			cj := &batchv1beta1.CronJob{}
-			Expect(k8sClient.Get(ctx, cronJobKey, cj)).Should(Succeed())
 
-			cj.Spec.Suspend = pointer.Bool(false)
-			Expect(k8sClient.Update(ctx, cj)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				cj := &batchv1beta1.CronJob{}
+				if err := k8sClient.Get(ctx, cronJobKey, cj); err != nil {
+					return err
+				}
+				cj.Spec.Suspend = pointer.Bool(false)
+				return k8sClient.Update(ctx, cj)
+			})).Should(Succeed())
 
 			// We'll need to wait until the controller has idled the CronJob
 			Eventually(func() (*bool, error) {
@@ -169,11 +167,7 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 		})
 
 		It("Should wakeup the CronJob", func() {
-			ir := &kidlev1beta1.IdlingResource{}
-			Expect(k8sClient.Get(ctx, irKey, ir)).Should(Succeed())
-
-			ir.Spec.Idle = false
-			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
 			// We'll need to wait until the controller has waked up the CronJob
 			Eventually(func() (*bool, error) {
@@ -210,7 +204,14 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 			Expect(k8s.HasAnnotation(&cj.ObjectMeta, kidlev1beta1.MetadataExpectedState)).ShouldNot(BeTrue())
 
 			By("checking the CronJob has been scaled up")
-			Expect(cj.Spec.Suspend).Should(Equal(pointer.Bool(false)))
+			Eventually(func() (*bool, error) {
+				cj := &batchv1beta1.CronJob{}
+				err := k8sClient.Get(ctx, cronJobKey, cj)
+				if err != nil {
+					return nil, err
+				}
+				return cj.Spec.Suspend, nil
+			}, timeout, interval).Should(Equal(pointer.Bool(false)))
 		})
 	})
 })
