@@ -1,6 +1,6 @@
 # kidle
 
-[![build](https://github.com/kidle-dev/kidle/actions/workflows/dev-branch.yaml/badge.svg?branch=main)](https://github.com/kidle-dev/kidle/actions/workflows/snapshot.yaml)
+[![snapshot](https://github.com/kidle-dev/kidle/actions/workflows/snapshot.yaml/badge.svg)](https://github.com/kidle-dev/kidle/actions/workflows/snapshot.yaml)
 
 Kidle is a kubernetes idling feature to automatically idle or wakeup workloads.
 
