@@ -97,7 +97,7 @@ jobs:
           mv ../cmd/kidlectl/bin/kidlectl .
           mv ../cmd/operator/bin/operator .
           for file in *; do strip $file || true; done
-          tar czvf ../../../${{ matrix.name }} *
+          tar czvf ../${{ matrix.name }} *
           cd -
       - name: Deploy | Upload artifacts
         uses: actions/upload-artifact@v2
