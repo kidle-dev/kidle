@@ -120,14 +120,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 
 		It("Should idle the StatefulSet", func() {
 			By("Idling the statefulset")
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				ir := &kidlev1beta1.IdlingResource{}
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = true
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, true)).Should(Succeed())
 
 			By("Checking that Replicas == 0")
 			Eventually(func() (*int32, error) {
@@ -160,15 +153,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 		})
 
 		It("Should wakeup the StatefulSet", func() {
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				ir := &kidlev1beta1.IdlingResource{}
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = false
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
-
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
 			// We'll need to wait until the controller has waked up the StatefulSet
 			Eventually(func() (*int32, error) {
@@ -182,14 +167,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 		})
 
 		It("Should wakeup the StatefulSet to previous replicas", func() {
-			ir := &kidlev1beta1.IdlingResource{}
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = false
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
 			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 				sts := &appsv1.StatefulSet{}
@@ -209,13 +187,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 				return sts.Spec.Replicas, nil
 			}, timeout, interval).Should(Equal(pointer.Int32(2)))
 
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = true
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, true)).Should(Succeed())
 
 			// We'll need to wait until the controller has idled the StatefulSet
 			By("idling")
@@ -228,13 +200,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 				return sts.Spec.Replicas, nil
 			}, timeout, interval).Should(Equal(pointer.Int32(0)))
 
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = false
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
 			// We'll need to wait until the controller has waked up the StatefulSet
 			By("waking up")

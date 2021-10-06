@@ -17,6 +17,9 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
@@ -97,3 +100,14 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
 })
+
+func setIdleFlag(ctx context.Context, irKey types.NamespacedName, idle bool) error {
+	ir := &kidlev1beta1.IdlingResource{}
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if err := k8sClient.Get(ctx, irKey, ir); err != nil {
+			return err
+		}
+		ir.Spec.Idle = idle
+		return k8sClient.Update(ctx, ir)
+	})
+}

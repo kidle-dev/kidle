@@ -120,14 +120,7 @@ var _ = Describe("idling/wakeup Deployments", func() {
 
 		It("Should idle the Deployment", func() {
 			By("Idling the deployment")
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				ir := &kidlev1beta1.IdlingResource{}
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = true
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, true)).Should(Succeed())
 
 			By("Checking that Replicas == 0")
 			Eventually(func() (*int32, error) {
@@ -163,14 +156,7 @@ var _ = Describe("idling/wakeup Deployments", func() {
 		})
 
 		It("Should wakeup the Deployment", func() {
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				ir := &kidlev1beta1.IdlingResource{}
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = false
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
 			// We'll need to wait until the controller has waked up the Deployment
 			Eventually(func() (*int32, error) {
@@ -184,14 +170,7 @@ var _ = Describe("idling/wakeup Deployments", func() {
 		})
 
 		It("Should wakeup the Deployment to previous replicas", func() {
-			ir := &kidlev1beta1.IdlingResource{}
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = false
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
 			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 				d := &appsv1.Deployment{}
@@ -211,14 +190,7 @@ var _ = Describe("idling/wakeup Deployments", func() {
 				return d.Spec.Replicas, nil
 			}, timeout, interval).Should(Equal(pointer.Int32(2)))
 
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = true
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
-			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, true)).Should(Succeed())
 
 			// We'll need to wait until the controller has idled the Deployment
 			By("idling")
@@ -231,14 +203,7 @@ var _ = Describe("idling/wakeup Deployments", func() {
 				return d.Spec.Replicas, nil
 			}, timeout, interval).Should(Equal(pointer.Int32(0)))
 
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = false
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
-			Expect(k8sClient.Update(ctx, ir)).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
 			// We'll need to wait until the controller has waked up the Deployment
 			By("waking up")

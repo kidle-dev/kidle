@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	"time"
 )
 
@@ -130,14 +129,7 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 
 		It("Should suspend the CronJob", func() {
 			By("Idling the cronjob")
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				ir := &kidlev1beta1.IdlingResource{}
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = true
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, true)).Should(Succeed())
 
 			By("Checking that Suspend == true")
 			Eventually(func() (*bool, error) {
@@ -170,14 +162,7 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 		})
 
 		It("Should wakeup the CronJob", func() {
-			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				ir := &kidlev1beta1.IdlingResource{}
-				if err := k8sClient.Get(ctx, irKey, ir); err != nil {
-					return err
-				}
-				ir.Spec.Idle = false
-				return k8sClient.Update(ctx, ir)
-			})).Should(Succeed())
+			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
 			// We'll need to wait until the controller has waked up the CronJob
 			Eventually(func() (*bool, error) {
