@@ -1,8 +1,5 @@
 include ../../hack/defines.mk
 
-# Image URL to use all building/pushing image targets
-IMG_KIDLECTL ?= kidledev/kidlectl
-
 ##@ Development
 gtest: ginkgo ## Run ginkgo tests.
 	ginkgo -r -v

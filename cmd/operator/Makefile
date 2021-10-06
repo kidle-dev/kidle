@@ -1,8 +1,5 @@
 include ../../hack/defines.mk
 
-# Image URL to use all building/pushing image targets
-IMG_OPERATOR ?= kidledev/kidle-operator
-
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -33,16 +30,16 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 
 ##@ Build
 run: generate fmt vet manifests ## Run against the configured Kubernetes cluster in ~/.kube/config
-	go run ./main.go
+	go run ./main.go --health-probe-bind-address=:8081 --metrics-bind-address=127.0.0.1:8080
 
 build: generate ## Build manager binary.
-	go build -o bin/operator main.go
+	$(GO_BUILD_RECIPE) -o bin/operator main.go
 
 d: docker ## -> docker.
 docker: docker-build docker-push ## Build and push the docker image.
 
 docker-build: build ## Build the docker image.
-	cd ../../; docker build \
+	cd ../../; docker build --no-cache \
 		--build-arg ARCH=${FROM_ARCH} \
 		--build-arg OS=${GOOS} \
 		--build-arg BUILD_REVISION=${BUILD_REVISION} \

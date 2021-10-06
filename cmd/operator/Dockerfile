@@ -16,6 +16,8 @@ LABEL BUILD_REVISION="$BUILD_REVISION" \
 
 WORKDIR /
 ADD cmd/operator/bin/operator .
-USER nonroot:nonroot
+
+# On busybox 'nobody' has uid `65534'
+USER 65534
 
 ENTRYPOINT ["/operator"]

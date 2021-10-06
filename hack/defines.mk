@@ -8,6 +8,10 @@ endif
 # Force bash as shell
 SHELL := /bin/bash
 
+# Image URL to use all building/pushing image targets
+IMG_OPERATOR ?= kidledev/kidle-operator
+IMG_KIDLECTL ?= kidledev/kidlectl
+
 # Defines some commons environment variables
 PROJECT_DIR := $(shell dirname $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST)))))
 BIN_DIR := $(PROJECT_DIR)/bin
