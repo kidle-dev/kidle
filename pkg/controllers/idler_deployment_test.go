@@ -142,11 +142,14 @@ var _ = Describe("idling/wakeup Deployments", func() {
 
 		It("Should watch the Deployment", func() {
 			By("Trying to update replicas on a idled object")
-			d := &appsv1.Deployment{}
-			Expect(k8sClient.Get(ctx, deployKey, d)).Should(Succeed())
-
-			d.Spec.Replicas = pointer.Int32(1)
-			Expect(k8sClient.Update(ctx, d)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				d := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, deployKey, d); err != nil {
+					return err
+				}
+				d.Spec.Replicas = pointer.Int32(1)
+				return k8sClient.Update(ctx, d)
+			})).Should(Succeed())
 
 			By("Checking that Replicas still equals to 0")
 			Eventually(func() (*int32, error) {
@@ -190,11 +193,14 @@ var _ = Describe("idling/wakeup Deployments", func() {
 				return k8sClient.Update(ctx, ir)
 			})).Should(Succeed())
 
-			d := &appsv1.Deployment{}
-			Expect(k8sClient.Get(ctx, deployKey, d)).Should(Succeed())
-
-			d.Spec.Replicas = pointer.Int32(2)
-			Expect(k8sClient.Update(ctx, d)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				d := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, deployKey, d); err != nil {
+					return err
+				}
+				d.Spec.Replicas = pointer.Int32(2)
+				return k8sClient.Update(ctx, d)
+			})).Should(Succeed())
 
 			Eventually(func() (*int32, error) {
 				d := &appsv1.Deployment{}
@@ -270,7 +276,14 @@ var _ = Describe("idling/wakeup Deployments", func() {
 			Expect(k8s.HasAnnotation(&d.ObjectMeta, kidlev1beta1.MetadataExpectedState)).ShouldNot(BeTrue())
 
 			By("checking the Deployment has been scaled up")
-			Expect(d.Spec.Replicas).Should(Equal(pointer.Int32(2)))
+			Eventually(func() (*int32, error) {
+				d := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, deployKey, d)
+				if err != nil {
+					return nil, err
+				}
+				return d.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(2)))
 		})
 	})
 })

@@ -214,7 +214,14 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 			Expect(k8s.HasAnnotation(&cj.ObjectMeta, kidlev1beta1.MetadataExpectedState)).ShouldNot(BeTrue())
 
 			By("checking the CronJob has been scaled up")
-			Expect(cj.Spec.Suspend).Should(Equal(pointer.Bool(false)))
+			Eventually(func() (*bool, error) {
+				cj := &batchv1beta1.CronJob{}
+				err := k8sClient.Get(ctx, cronJobKey, cj)
+				if err != nil {
+					return nil, err
+				}
+				return cj.Spec.Suspend, nil
+			}, timeout, interval).Should(Equal(pointer.Bool(false)))
 		})
 	})
 })

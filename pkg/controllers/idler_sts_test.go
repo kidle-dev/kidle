@@ -191,11 +191,14 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 				return k8sClient.Update(ctx, ir)
 			})).Should(Succeed())
 
-			sts := &appsv1.StatefulSet{}
-			Expect(k8sClient.Get(ctx, stsKey, sts)).Should(Succeed())
-
-			sts.Spec.Replicas = pointer.Int32(2)
-			Expect(k8sClient.Update(ctx, sts)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				sts := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, stsKey, sts); err != nil {
+					return err
+				}
+				sts.Spec.Replicas = pointer.Int32(2)
+				return k8sClient.Update(ctx, sts)
+			})).Should(Succeed())
 
 			Eventually(func() (*int32, error) {
 				sts := &appsv1.StatefulSet{}
@@ -269,7 +272,14 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 			Expect(k8s.HasAnnotation(&sts.ObjectMeta, kidlev1beta1.MetadataExpectedState)).ShouldNot(BeTrue())
 
 			By("checking the StatefulSet has been scaled up")
-			Expect(sts.Spec.Replicas).Should(Equal(pointer.Int32(2)))
+			Eventually(func() (*int32, error) {
+				sts := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, stsKey, sts)
+				if err != nil {
+					return nil, err
+				}
+				return sts.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(pointer.Int32(2)))
 		})
 	})
 })
