@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"time"
 )
 
@@ -34,13 +35,13 @@ func newIdlingResource(key types.NamespacedName, ref *kidlev1beta1.CrossVersionO
 
 var _ = Describe("idling/wakeup Cronjobs", func() {
 	const (
-		timeout  = time.Second * 10
+		timeout = time.Second * 10
 		//duration = time.Second * 10
 		interval = time.Millisecond * 250
 	)
 	var (
 		irKey = types.NamespacedName{Name: "ir-idler-cronjob", Namespace: "default"}
-		ctx = context.Background()
+		ctx   = context.Background()
 	)
 
 	Context("CronJob suite", func() {
@@ -144,11 +145,15 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 
 		It("Should watch the CronJob", func() {
 			By("Trying to update suspend field on a idled object")
-			cj := &batchv1beta1.CronJob{}
-			Expect(k8sClient.Get(ctx, cronJobKey, cj)).Should(Succeed())
 
-			cj.Spec.Suspend = pointer.Bool(false)
-			Expect(k8sClient.Update(ctx, cj)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				cj := &batchv1beta1.CronJob{}
+				if err := k8sClient.Get(ctx, irKey, cj); err != nil {
+					return err
+				}
+				cj.Spec.Suspend = pointer.Bool(false)
+				return k8sClient.Update(ctx, cj)
+			})).Should(Succeed())
 
 			// We'll need to wait until the controller has idled the CronJob
 			Eventually(func() (*bool, error) {

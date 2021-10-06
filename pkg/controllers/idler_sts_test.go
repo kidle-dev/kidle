@@ -135,11 +135,15 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 
 		It("Should watch the StatefulSet", func() {
 			By("Trying to update replicas on a idled object")
-			s := &appsv1.StatefulSet{}
-			Expect(k8sClient.Get(ctx, stsKey, s)).Should(Succeed())
+			Expect(retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				sts := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, stsKey, sts); err != nil {
+					return err
+				}
+				sts.Spec.Replicas = pointer.Int32(1)
+				return k8sClient.Update(ctx, sts)
+			})).Should(Succeed())
 
-			s.Spec.Replicas = pointer.Int32(1)
-			Expect(k8sClient.Update(ctx, s)).Should(Succeed())
 
 			By("Checking that Replicas still equals to 0")
 			Eventually(func() (*int32, error) {
