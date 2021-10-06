@@ -18,10 +18,10 @@ test: manifests generate fmt vet ## Run go tests.
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
-fmt: ## Run go fmt against code
+fmt: ## Run go fmt against code.
 	go fmt ./...
 
-vet: ## Run go vet against code
+vet: ## Run go vet against code.
 	go vet ./...
 
 manifests: controller-gen  ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -57,7 +57,7 @@ docker-build: build ## Build the docker image.
 docker-push: ## Push the docker image.
 	docker push ${IMG_OPERATOR}:${TAG}-${GOARCH}
 
-build-multi-arch-image: ## Multi arch docker image build
+build-multi-arch-image: ## Multi arch docker image build.
 	IMAGE=${IMG_OPERATOR} TAG=${TAG} ../../hack/push-docker-image.sh
 
 ##@ Remote debug

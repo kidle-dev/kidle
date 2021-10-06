@@ -8,9 +8,9 @@ Main features:
 
 - [x] idle and wakeup Deployments, StatefulSets and CronJobs
 - [x] idle and wakeup at specified time
-- [-] shutdown after some idle time
-- [-] automatic wakeup on call
-- [-] fancy UI
+- [ ] shutdown after some idle time
+- [ ] automatic wakeup on call
+- [ ] fancy UI
 
 ## Demo
 

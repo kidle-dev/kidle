@@ -4,28 +4,28 @@ include ../../hack/defines.mk
 IMG_KIDLECTL ?= kidledev/kidlectl
 
 ##@ Development
-gtest: ginkgo ## Run ginkgo tests
+gtest: ginkgo ## Run ginkgo tests.
 	ginkgo -r -v
 
-test: fmt vet ## Run tests
+test: fmt vet ## Run tests.
 	go test ./... -coverprofile cover.out
 
-fmt: ## Run go fmt against code
+fmt: ## Run go fmt against code.
 	go fmt ./...
 
-vet: ## Run go vet against code
+vet: ## Run go vet against code.
 	go vet ./...
 
 
 ##@ Build
-build: ## Build kidlectl binary
+build: ## Build kidlectl binary.
 	$(GO_BUILD_RECIPE) -o bin/kidlectl .
 
-run: fmt vet ## Run kidlectl
+run: fmt vet ## Run kidlectl.
 	go run ./*.go
 
 d: docker ## -> docker
-docker: docker-build docker-push ## Build and push the docker image
+docker: docker-build docker-push ## Build and push the docker image.
 
 docker-build: build ## Build the docker image.
 	cd ../../; docker build \
@@ -40,8 +40,8 @@ docker-build: build ## Build the docker image.
 		-f cmd/kidlectl/Dockerfile \
 		.
 
-docker-push: ## Push the docker image
+docker-push: ## Push the docker image.
 	docker push ${IMG_KIDLECTL}:${TAG}-${GOARCH}
 
-build-multi-arch-image: ## Multi arch docker image build
+build-multi-arch-image: ## Multi arch docker image build.
 	IMAGE=${IMG_KIDLECTL} TAG=${TAG} ../../hack/push-docker-image.sh
