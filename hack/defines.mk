@@ -8,10 +8,15 @@ endif
 # Force bash as shell
 SHELL := /bin/bash
 
+# Image URL to use all building/pushing image targets
+IMG_OPERATOR ?= kidledev/kidle-operator
+IMG_KIDLECTL ?= kidledev/kidlectl
+
 # Defines some commons environment variables
 PROJECT_DIR := $(shell dirname $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST)))))
 BIN_DIR := $(PROJECT_DIR)/bin
 ENVTEST_ASSETS_DIR=$(BIN_DIR)/test
+TAG?=$(shell git rev-parse --short HEAD)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 define go-get-tool
@@ -25,6 +30,45 @@ GOBIN=$(BIN_DIR) go install $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
+
+
+GOOS?=$(shell go env GOOS)
+GOARCH?=$(shell go env GOARCH)
+ifeq ($(GOARCH),arm)
+	FROM_ARCH=armv7
+else
+	FROM_ARCH=$(GOARCH)
+endif
+
+VERSION?=$(shell cat $(PROJECT_DIR)/VERSION | tr -d " \t\n\r")
+BUILD_DATE=$(shell date +"%Y%m%d-%T")
+# source: https://docs.github.com/en/free-pro-team@latest/actions/reference/environment-variables#default-environment-variables
+ifndef GITHUB_ACTIONS
+	BUILD_USER?=$(USER)
+	BUILD_BRANCH?=$(shell git branch --show-current)
+	BUILD_REVISION?=$(shell git rev-parse --short HEAD)
+else
+	BUILD_USER=Action-Run-ID-$(GITHUB_RUN_ID)
+	BUILD_BRANCH=$(GITHUB_REF:refs/heads/%=%)
+	BUILD_REVISION=$(GITHUB_SHA)
+endif
+
+KIDLE_VERSION_PKG=github.com/kidle-dev/kidle/pkg
+
+# The ldflags for the go build process to set the version related data.
+GO_BUILD_LDFLAGS=\
+	-s \
+	-X $(KIDLE_VERSION_PKG)/version.Revision=$(BUILD_REVISION)  \
+	-X $(KIDLE_VERSION_PKG)/version.BuildUser=$(BUILD_USER) \
+	-X $(KIDLE_VERSION_PKG)/version.BuildDate=$(BUILD_DATE) \
+	-X $(KIDLE_VERSION_PKG)/version.Branch=$(BUILD_BRANCH) \
+	-X $(KIDLE_VERSION_PKG)/version.Version=$(VERSION)
+
+GO_BUILD_RECIPE=\
+	env GOOS=$(GOOS) \
+	GOARCH=$(GOARCH) \
+	CGO_ENABLED=0 \
+	go build -ldflags="$(GO_BUILD_LDFLAGS)"
 
 ##@ Common commands
 KUSTOMIZE = $(BIN_DIR)/kustomize

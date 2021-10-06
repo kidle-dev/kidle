@@ -23,8 +23,17 @@ lint: golangci-lint ## Run golangci-lint globally
 run: ## Run the $WHAT target
 	hack/make-rules/build.sh run $(WHAT)
 
+fmt: ## Fmt the $WHAT target
+	hack/make-rules/build.sh fmt $(WHAT)
+
+vet: ## Vet the $WHAT target
+	hack/make-rules/build.sh vet $(WHAT)
+
 build: ## Build the $WHAT target.
 	hack/make-rules/build.sh build $(WHAT)
+
+build-multi-arch-image: ## Multi arch build the $WHAT target.
+	hack/make-rules/build.sh build-multi-arch-image $(WHAT)
 
 d: docker ## -> docker
 docker: ## Build and push the docker image of the $WHAT target.
@@ -45,8 +54,11 @@ uninstall: kustomize manifests ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: kustomize manifests ## Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_OPERATOR}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_OPERATOR}:${TAG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
+
+undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
+	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 deploy-debug: kustomize manifests ## Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_DEBUG}

@@ -1,8 +1,5 @@
 include ../../hack/defines.mk
 
-# Image URL to use all building/pushing image targets
-IMG_OPERATOR ?= kidle-operator:latest
-
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -18,10 +15,10 @@ test: manifests generate fmt vet ## Run go tests.
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
-fmt: ## Run go fmt against code
+fmt: ## Run go fmt against code.
 	go fmt ./...
 
-vet: ## Run go vet against code
+vet: ## Run go vet against code.
 	go vet ./...
 
 manifests: controller-gen  ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -33,19 +30,32 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 
 ##@ Build
 run: generate fmt vet manifests ## Run against the configured Kubernetes cluster in ~/.kube/config
-	go run ./main.go
+	go run ./main.go --health-probe-bind-address=:8081 --metrics-bind-address=127.0.0.1:8080
 
-build: generate fmt vet ## Build manager binary.
-	go build -o bin/operator main.go
+build: generate ## Build manager binary.
+	$(GO_BUILD_RECIPE) -o bin/operator main.go
 
 d: docker ## -> docker.
 docker: docker-build docker-push ## Build and push the docker image.
 
-docker-build: test ## Build the docker image.
-	cd ../../; docker build . -t ${IMG_OPERATOR} -f cmd/operator/Dockerfile
+docker-build: build ## Build the docker image.
+	cd ../../; docker build --no-cache \
+		--build-arg ARCH=${FROM_ARCH} \
+		--build-arg OS=${GOOS} \
+		--build-arg BUILD_REVISION=${BUILD_REVISION} \
+		--build-arg BUILD_USER=${BUILD_USER} \
+		--build-arg BUILD_DATE=${BUILD_DATE} \
+		--build-arg BUILD_BRANCH=${BUILD_BRANCH} \
+		--build-arg VERSION=${VERSION} \
+		-t ${IMG_OPERATOR}:${TAG}-${GOARCH} \
+		-f cmd/operator/Dockerfile \
+		.
 
 docker-push: ## Push the docker image.
-	docker push ${IMG_OPERATOR}
+	docker push ${IMG_OPERATOR}:${TAG}-${GOARCH}
+
+build-multi-arch-image: ## Multi arch docker image build.
+	IMAGE=${IMG_OPERATOR} TAG=${TAG} ../../hack/push-docker-image.sh
 
 ##@ Remote debug
 dd: docker-debug ## -> docker-debug

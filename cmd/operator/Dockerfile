@@ -1,30 +1,23 @@
-# Build the manager binary
-FROM golang:1.16 as builder
+ARG ARCH="amd64"
+ARG OS="linux"
+FROM quay.io/prometheus/busybox-${OS}-${ARCH}:latest
 
-WORKDIR /workspace
+ARG BUILD_REVISION
+ARG BUILD_USER
+ARG BUILD_DATE
+ARG BUILD_BRANCH
+ARG VERSION
 
-# Copy the Go Modules manifests
-COPY go.mod go.mod
-COPY go.sum go.sum
+LABEL BUILD_REVISION="$BUILD_REVISION" \
+      BUILD_USER="$BUILD_USER" \
+      BUILD_DATE="$BUILD_DATE" \
+      BUILD_BRANCH="$BUILD_BRANCH" \
+      VERSION="$VERSION"
 
-# Cache deps before building and copying source so that we don't need to re-download as much
-# and so that source changes don't invalidate our downloaded layer
-RUN go mod download
-
-# Copy the go source
-COPY cmd/operator/ cmd/operator/
-COPY pkg pkg/
-
-# Build
-#RUN cd cmd/operator
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o operator cmd/operator/main.go
-
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
 WORKDIR /
-COPY --from=builder /workspace/operator .
-USER nonroot:nonroot
+ADD cmd/operator/bin/operator .
+
+# On busybox 'nobody' has uid `65534'
+USER 65534
 
 ENTRYPOINT ["/operator"]
-

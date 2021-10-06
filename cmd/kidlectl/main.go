@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/jessevdk/go-flags"
+	"github.com/kidle-dev/kidle/pkg/version"
 	"k8s.io/apimachinery/pkg/types"
 	"os"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -10,9 +13,10 @@ import (
 
 // options are the cli main options for go-flags
 type options struct {
-	Kubeconfig string               `long:"kubeconfig" env:"KUBECONFIG" description:"path to Kubernetes config file"`
-	IdleCmd    idleCommandOptions   `command:"idle" alias:"i" description:"idle the referenced object of an IdlingResource"`
-	WakeUpCmd  wakeupCommandOptions `command:"wakeup" alias:"w" description:"wakeup the referenced object of an IdlingResource"`
+	Kubeconfig string                `long:"kubeconfig" env:"KUBECONFIG" description:"path to Kubernetes config file"`
+	IdleCmd    idleCommandOptions    `command:"idle" alias:"i" description:"idle the referenced object of an IdlingResource"`
+	WakeUpCmd  wakeupCommandOptions  `command:"wakeup" alias:"w" description:"wakeup the referenced object of an IdlingResource"`
+	VersionCmd versionCommandOptions `command:"version" description:"show the kidle version information"`
 }
 
 // idleCommandOptions are the options of the idle command
@@ -29,6 +33,10 @@ type wakeupCommandOptions struct {
 		Name string `long:"name" env:"NAME" description:"idling resource name to wakeup"`
 	} `positional-args:"yes" required:"1"`
 	Namespace string `long:"namespace" env:"NAMESPACE" short:"n" description:"IdlingResource namespace"`
+}
+
+// versionCommandOptions are the options of the version command
+type versionCommandOptions struct {
 }
 
 func main() {
@@ -95,5 +103,13 @@ func main() {
 		} else {
 			logf.Log.V(0).Info("already waked up", "namespace", kidle.Namespace, "name", opts.WakeUpCmd.Args.Name)
 		}
+
+	case "version":
+		b, err := json.Marshal(version.GetVersionInfos())
+		if err != nil {
+			fmt.Println(version.Version)
+			return
+		}
+		fmt.Println(string(b))
 	}
 }
