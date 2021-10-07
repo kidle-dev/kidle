@@ -125,8 +125,6 @@ jobs:
 
       - name: Generate Changelog
         run: |
-          echo "PATH=${PATH}:$(go env GOPATH)/bin" >> $GITHUB_ENV
-          make git-chglog
           make changelog
 
       - name: Download Artifacts

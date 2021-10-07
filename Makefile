@@ -19,7 +19,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 lint: golangci-lint ## Run golangci-lint globally
 	$(GOLANGCI_LINT) run
 
-changelog:
+changelog: git-chglog
 	$(GIT_CHGLOG) -c .github/chglog/release.yml $(git describe --tags) > RELEASE.md
 
 ##@ Build
