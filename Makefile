@@ -19,6 +19,10 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 lint: golangci-lint ## Run golangci-lint globally
 	$(GOLANGCI_LINT) run
 
+changelog:
+	GO111MODULE=on go mod download github.com/git-chglog/git-chglog@v0.15.0
+	git-chglog -c .github/chglog/release.yml $(git describe --tags) > RELEASE.md
+
 ##@ Build
 run: ## Run the $WHAT target
 	hack/make-rules/build.sh run $(WHAT)
