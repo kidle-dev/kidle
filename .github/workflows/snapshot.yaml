@@ -3,11 +3,15 @@ on:
   push:
     branches:
       - '**'        # matches every branch
+    paths-ignore:
+      - "README.md"
+      - 'docs/**'
 
 jobs:
   build-operator:
     runs-on: ubuntu-latest
     name: build-operator
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
     steps:
 
     - name: Set up Go 1.x
@@ -63,6 +67,7 @@ jobs:
   build-kidlectl:
     runs-on: ubuntu-latest
     name: build-kidlectl
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
     steps:
 
     - name: Set up Go 1.x
@@ -117,6 +122,7 @@ jobs:
   ginkgo-tests:
     runs-on: ubuntu-latest
     name: ginkgo tests
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
     steps:
 
     - name: Set up Go 1.x
@@ -153,6 +159,7 @@ jobs:
   golangci:
     runs-on: ubuntu-latest
     name: lint
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
     steps:
       - uses: actions/checkout@v2
       - name: golangci-lint
