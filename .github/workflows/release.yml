@@ -1,0 +1,141 @@
+# This action will generate Windows|Linux|MacOS binary releases
+
+name: Release
+
+on:
+  create:
+    tags:
+      - 'v*'
+
+jobs:
+  build_release:
+    name: Build release binaries
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target_os: linux
+            target_arch: amd64
+            os: ubuntu-latest
+            name: kidle-amd64-linux.tar.gz
+
+          - target_os: linux
+            target_arch: 386
+            os: ubuntu-latest
+            name: kidle-386-linux.tar.gz
+
+          - target_os: linux
+            target_arch: arm64
+            os: ubuntu-latest
+            name: kidle-arm64-linux.tar.gz
+
+          - target_os: linux
+            target_arch: arm
+            os: ubuntu-latest
+            name: kidle-arm-linux.tar.gz
+
+          - target_os: darwin
+            target_arch: amd64
+            os: macOS-latest
+            name: kidle-amd64-darwin.tar.gz
+
+          - target_os: darwin
+            target_arch: arm64
+            os: macOS-latest
+            name: kidle-arm64-darwin.tar.gz
+
+          - target_os: windows
+            target_arch: amd64
+            os: windows-latest
+            name: kidle-amd64-windows.zip
+
+          - target_os: windows
+            target_arch: 386
+            os: windows-latest
+            name: kidle-386-windows.zip
+
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Cache Go Builds
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            ~/Library/Caches/go-build
+            %LocalAppData%\go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "^1.16"
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.target_os }}
+          GOARCH: ${{ matrix.target_arch }}
+        run: |
+          make build
+
+      - name: Prepare artifacts [Windows]
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd cmd/kidlectl/bin
+          strip kidlectl
+          7z a ../../../${{ matrix.name }} kidlectl
+          cd -
+      - name: Prepare artifacts [Unix]
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd cmd/kidlectl/bin
+          strip kidlectl || true
+          tar czvf ../../../${{ matrix.name }} kidlectl
+          cd -
+
+      - name: Deploy | Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}
+
+  publish_release:
+    name: Create and Publish GitHub Release
+    needs: build_release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Inject slug/short variables
+        uses: rlespinasse/github-slug-action@v3.x
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "^1.16"
+
+      - name: Generate Changelog
+        run: |
+          make changelog
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+
+      - name: Generate Checksums
+        run: for file in kidle-*/kidle-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ env.GITHUB_REF_SLUG }}
+          files: kidle-*/kidle-*
+          body_path: RELEASE.md

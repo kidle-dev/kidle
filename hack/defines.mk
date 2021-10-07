@@ -87,6 +87,10 @@ GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 golangci-lint: ## Download golangci-lint locally if necessary.
 	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1)
 
+GIT_CHGLOG = $(BIN_DIR)/git-chglog
+git-chglog: ## Download git-chglog locally if necessary.
+	$(call go-get-tool,$(GIT_CHGLOG),github.com/git-chglog/git-chglog/cmd/git-chglog@v0.15.0)
+
 
 ##@ General
 
