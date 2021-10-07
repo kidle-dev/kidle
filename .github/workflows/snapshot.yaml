@@ -5,6 +5,7 @@ on:
       - '**'        # matches every branch
     paths-ignore:
       - "README.md"
+      - 'docs/**'
 
 jobs:
   build-operator:
