@@ -125,6 +125,7 @@ jobs:
 
       - name: Generate Changelog
         run: |
+          export PATH=${PATH}:`go env GOPATH`/bin
           make changelog
 
       - name: Download Artifacts
