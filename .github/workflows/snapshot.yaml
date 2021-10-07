@@ -3,8 +3,11 @@ on:
   push:
     branches:
       - '**'        # matches every branch
+    paths-ignore:
+      - "README.md"
 
 jobs:
+  if: "!contains(github.event.head_commit.message, '[ci skip]')"
   build-operator:
     runs-on: ubuntu-latest
     name: build-operator
