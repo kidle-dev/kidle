@@ -45,3 +45,17 @@ For now, kidle is in early stages. When ready, Kidle will be deployed using a he
 ## Documentation
 
 Here is a [user guide](docs/userguide.md).
+
+## Docker
+
+The [operator](cmd/operator) builds are published to [docker](https://hub.docker.com/r/kidledev/kidle-operator).
+
+Following tags are maintained:
+
+  * `vx.y.z`: Images that are build from the tagged versions within Github. Always unique.
+  * `vx.y`: Represents latest `.z` revision.
+  * `vx`: Represents latest `.y.z` revision.
+
+```
+docker pull kidledev/kidle-operator:<tag>
+```
