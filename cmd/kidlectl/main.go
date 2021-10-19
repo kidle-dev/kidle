@@ -13,10 +13,11 @@ import (
 
 // options are the cli main options for go-flags
 type options struct {
-	Kubeconfig string                `long:"kubeconfig" env:"KUBECONFIG" description:"path to Kubernetes config file"`
-	IdleCmd    idleCommandOptions    `command:"idle" alias:"i" description:"idle the referenced object of an IdlingResource"`
-	WakeUpCmd  wakeupCommandOptions  `command:"wakeup" alias:"w" description:"wakeup the referenced object of an IdlingResource"`
-	VersionCmd versionCommandOptions `command:"version" description:"show the kidle version information"`
+	Kubeconfig   string                  `long:"kubeconfig" env:"KUBECONFIG" description:"path to Kubernetes config file"`
+	IdleCmd      idleCommandOptions      `command:"idle" alias:"i" description:"idle the referenced object of an IdlingResource"`
+	WakeUpCmd    wakeupCommandOptions    `command:"wakeup" alias:"w" description:"wakeup the referenced object of an IdlingResource"`
+	VersionCmd   versionCommandOptions   `command:"version" description:"show the kidle version information"`
+	DiscoveryCmd discoveryCommandOptions `command:"discovery" description:"show the kidle version information"`
 }
 
 // idleCommandOptions are the options of the idle command
@@ -37,6 +38,10 @@ type wakeupCommandOptions struct {
 
 // versionCommandOptions are the options of the version command
 type versionCommandOptions struct {
+}
+
+// discoveryCommandOptions are the options of the version command
+type discoveryCommandOptions struct {
 }
 
 func main() {
@@ -111,5 +116,20 @@ func main() {
 			return
 		}
 		fmt.Println(string(b))
+
+	case "discovery":
+		kidle, err := NewKidleClient(opts.WakeUpCmd.Namespace)
+		if err != nil {
+			logf.Log.Error(err, "unable to create kidle client")
+			os.Exit(2)
+		}
+
+		allowedPrefixesMap, err := kidle.GetAllowedResources()
+		if err != nil {
+			logf.Log.Error(err, "unable to get allowed resources list")
+			os.Exit(3)
+		}
+
+		fmt.Printf("%#v", allowedPrefixesMap)
 	}
 }

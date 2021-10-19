@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	kidlev1beta1 "github.com/kidle-dev/kidle/pkg/api/v1beta1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -13,7 +17,8 @@ import (
 
 type KidleClient struct {
 	client.Client
-	Namespace string
+	DiscoveryClient *discovery.DiscoveryClient
+	Namespace       string
 }
 
 // NewKidleClient creates a kubernetes client for kidle.
@@ -51,7 +56,18 @@ func NewKidleClient(namespace string) (*KidleClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error when creating client: %v", err)
 	}
-	return &KidleClient{Client: client, Namespace: currentNamespace}, nil
+
+	// Create a discoveryClient
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error when creating discoveryclient: %v", err)
+	}
+
+	return &KidleClient{
+		Client:          client,
+		DiscoveryClient: discoveryClient,
+		Namespace:       currentNamespace,
+	}, nil
 }
 
 // applyDesiredIdleState make sure that the referenced object has the proper idling state
@@ -79,4 +95,63 @@ func (k *KidleClient) applyDesiredIdleState(idle bool, req *client.ObjectKey) (b
 		return false, fmt.Errorf("unable to update idlingresource: %v", err)
 	}
 	return true, nil
+}
+
+var AllowedGVK = []v1.GroupVersionKind{
+	{
+		Group:   "apps",
+		Version: "v1",
+		Kind:    "deployments",
+	},
+	{
+		Group:   "apps",
+		Version: "v1",
+		Kind:    "statefulsets",
+	},
+	{
+		Group:   "batch",
+		Version: "v1beta1",
+		Kind:    "cronjobs",
+	},
+	{
+		Group:   "batch",
+		Version: "v1",
+		Kind:    "cronjobs",
+	},
+}
+
+func (k *KidleClient) GetAllowedResources() (map[string]bool, error) {
+
+	var allowedPrefixes []string
+
+	_, resourcesListSlice, err := k.DiscoveryClient.ServerGroupsAndResources()
+	if err != nil {
+		return nil, err
+	}
+	for _, resourceList := range resourcesListSlice {
+		for _, gvk := range AllowedGVK {
+			gv, err := schema.ParseGroupVersion(resourceList.GroupVersion)
+			if err != nil {
+				return nil, err
+			}
+
+
+			if err == nil && gvk.Group == gv.Group && gvk.Version == gv.Version {
+				for _, resource := range resourceList.APIResources {
+					if gvk.Kind == resource.Name {
+						_, singular := meta.UnsafeGuessKindToResource(gv.WithKind(resource.Kind))
+						allowedPrefixes = append(allowedPrefixes, resource.ShortNames...)
+						allowedPrefixes = append(allowedPrefixes, singular.Resource)
+						allowedPrefixes = append(allowedPrefixes, resource.Name)
+					}
+				}
+			}
+		}
+	}
+
+	allowedPrefixesMap := make(map[string]bool)
+	for _, a := range allowedPrefixes {
+		allowedPrefixesMap[a] = true
+	}
+	return allowedPrefixesMap, nil
 }
