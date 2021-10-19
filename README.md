@@ -45,3 +45,7 @@ For now, kidle is in early stages. When ready, Kidle will be deployed using a he
 ## Documentation
 
 Here is a [user guide](docs/userguide.md).
+
+## Contact
+
+You can find me on the [kidle-dev slack](https://kidle-dev.slack.com/archives/C02JXP2JTK2)
