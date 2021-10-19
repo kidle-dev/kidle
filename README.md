@@ -42,6 +42,20 @@ kubectl get ir,deploy
 
 For now, kidle is in early stages. When ready, Kidle will be deployed using a helm chart or kustomize.
 
+For now you can deploy kidle using the `deploy` target:
+
+```
+$ TAG=main make deploy
+$ kubectl get deploy -n kidle-system
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+kidle-controller-manager   1/1     1            1           13d
+```
+
+To uninstall:
+```
+make undeploy
+```
+
 ## Documentation
 
 Here is a [user guide](docs/userguide.md).
