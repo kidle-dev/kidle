@@ -58,7 +58,7 @@ uninstall: kustomize manifests ## Uninstall CRDs from the K8s cluster specified 
 
 deploy: kustomize manifests ## Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_OPERATOR}:${TAG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default | sed "s@--kidlectl-image=@--kidlectl-image=${IMG_KIDLECTL}:${TAG}@" | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
@@ -70,10 +70,10 @@ deploy-debug: kustomize manifests ## Deploy controller in the configured Kuberne
 
 ##@ Local kubernetes environment
 k3d-registry: ## Create a k3d registry.
-	k3d registry create --port 16000 kidle.localhost
+	k3d registry create --port 16000 kidle
 
 k3s-create: ## Create a k3s-kidle k8s server.
-	k3d cluster create kidle --registry-use k3d-kidle.localhost:16000  --volume /home/nicolas/fun/kidle:/kidle --port 30123:30123@server[0]
+	k3d cluster create kidle --registry-use k3d-kidle:16000  --volume /home/nicolas/fun/kidle:/kidle --port 30123:30123@server[0]
 
 k3s-delete: ## Delete a k3s-kidle k8s server.
 	k3d cluster delete kidle

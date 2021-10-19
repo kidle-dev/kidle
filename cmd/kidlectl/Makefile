@@ -33,12 +33,12 @@ docker-build: build ## Build the docker image.
 		--build-arg BUILD_DATE=${BUILD_DATE} \
 		--build-arg BUILD_BRANCH=${BUILD_BRANCH} \
 		--build-arg VERSION=${VERSION} \
-		-t ${IMG_KIDLECTL}:${TAG}-${GOARCH} \
+		-t ${IMG_KIDLECTL}:${TAG}${TAG_SUFFIX} \
 		-f cmd/kidlectl/Dockerfile \
 		.
 
 docker-push: ## Push the docker image.
-	docker push ${IMG_KIDLECTL}:${TAG}-${GOARCH}
+	docker push ${IMG_KIDLECTL}:${TAG}${TAG_SUFFIX}
 
 build-multi-arch-image: ## Multi arch docker image build.
 	IMAGE=${IMG_KIDLECTL} TAG=${TAG} ../../hack/push-docker-image.sh

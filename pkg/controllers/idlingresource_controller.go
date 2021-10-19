@@ -49,6 +49,7 @@ type IdlingResourceReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	record.EventRecorder
+	KidlectlImage string
 }
 
 // +kubebuilder:rbac:groups=kidle.kidle.dev,resources=idlingresources,verbs=get;list;watch;create;update;patch;delete

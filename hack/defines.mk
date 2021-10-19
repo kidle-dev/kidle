@@ -109,7 +109,11 @@ help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 env: ## Display Makefile environment variables
+	@echo IMG_OPERATOR=$(IMG_OPERATOR)
+	@echo IMG_KIDLECTL=$(IMG_KIDLECTL)
+	@echo TAG=$(TAG)
 	@echo GOBIN=$(GOBIN)
+	@echo GOARCH=$(GOARCH)
 	@echo SHELL=$(SHELL)
 	@echo PROJECT_DIR=$(PROJECT_DIR)
 	@echo BIN_DIR=$(BIN_DIR)
