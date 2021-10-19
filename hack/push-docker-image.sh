@@ -15,10 +15,7 @@ set -e
 # only exit with zero if all commands of the pipeline exit successfully
 set -o pipefail
 
-echo ${TAG} | IFS="." read major minor revision
-
 CPU_ARCHS="amd64 arm64 arm"
-TAGS=("$major.$minor.$revision" "$major.$minor" "$major")
 
 # Build images
 for arch in ${CPU_ARCHS}; do
@@ -28,7 +25,8 @@ done
 # Compose multi-arch images and push them to remote registry
 export DOCKER_CLI_EXPERIMENTAL=enabled
 
-for EXP_TAG in ${TAGS[@]}; do
+IFS=','
+for EXP_TAG in ${TAGS}; do
   # Create manifest to join all images under one virtual tag
   docker manifest create -a "${IMAGE}:${EXP_TAG}" \
           "${IMAGE}:${TAG}-amd64" \
