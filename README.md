@@ -40,7 +40,26 @@ kubectl get ir,deploy
 
 ## Deployment
 
-For now, kidle is in early stages. When ready, Kidle will be deployed using a helm chart or kustomize.
+You can deploy kidle using the `deploy` target. 
+It expects a cluster-admin role and creates a `kidle-system` namespace.
+You can select the release you want by setting the `TAG=` as an environment variable.
+
+```
+$ TAG=main make deploy
+$ kubectl get deploy -n kidle-system
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+kidle-controller-manager   1/1     1            1           13d
+```
+
+To uninstall:
+```
+make undeploy
+```
+
+If you want to see the kubernetes manifests before applying:
+```
+make deploy-view
+```
 
 ## Documentation
 

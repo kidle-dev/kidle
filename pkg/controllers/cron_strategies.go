@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	KidlectlImage        = "kidle/kidlectl:latest"
 	CronJobContainerName = "kidlectl"
 	CommandIdle          = "idle"
 	CommandWakeup        = "wakeup"
@@ -113,7 +112,7 @@ func (r *IdlingResourceReconciler) createOrUpdateCronJob(ctx context.Context, in
 	if err := r.Get(ctx, cjValues.key, cronJob); err != nil {
 		if errors.IsNotFound(err) {
 			cj := NewCronJob(cjValues.key)
-			setCronjobValues(cj, cjValues)
+			r.setCronjobValues(cj, cjValues)
 			if err := controllerutil.SetControllerReference(instance, cj, r.Scheme); err != nil {
 				return fmt.Errorf("unable to set controller reference for cronJob: %v", err)
 			}
@@ -126,8 +125,8 @@ func (r *IdlingResourceReconciler) createOrUpdateCronJob(ctx context.Context, in
 		}
 	}
 
-	if cronJobNeedChanges(cronJob, cjValues) {
-		setCronjobValues(cronJob, cjValues)
+	if r.cronJobNeedChanges(cronJob, cjValues) {
+		r.setCronjobValues(cronJob, cjValues)
 		if err := r.Update(ctx, cronJob); err != nil {
 			return fmt.Errorf("unable to update cronJob: %v", err)
 		}
@@ -166,7 +165,7 @@ func NewCronJob(key types.NamespacedName) *batchv1beta1.CronJob {
 	return cj
 }
 
-func cronJobNeedChanges(cronJob *batchv1beta1.CronJob, cjValues *CronJobValues) bool {
+func (r *IdlingResourceReconciler) cronJobNeedChanges(cronJob *batchv1beta1.CronJob, cjValues *CronJobValues) bool {
 	if cronJob.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName != getSaName(cjValues.instanceName) {
 		return true
 	}
@@ -179,7 +178,7 @@ func cronJobNeedChanges(cronJob *batchv1beta1.CronJob, cjValues *CronJobValues) 
 	}
 
 	container := k8s.ContainersToMap(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers)[CronJobContainerName]
-	if container.Image != KidlectlImage {
+	if container.Image != r.KidlectlImage {
 		return true
 	}
 	if len(container.Args) != 2 ||
@@ -190,14 +189,14 @@ func cronJobNeedChanges(cronJob *batchv1beta1.CronJob, cjValues *CronJobValues) 
 	return false
 }
 
-func setCronjobValues(cronJob *batchv1beta1.CronJob, cjValues *CronJobValues) {
+func (r *IdlingResourceReconciler) setCronjobValues(cronJob *batchv1beta1.CronJob, cjValues *CronJobValues) {
 	cronJob.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName = getSaName(cjValues.instanceName)
 
 	cronJob.Spec.Suspend = pointer.Bool(false)
 	cronJob.Spec.Schedule = cjValues.strategy.Schedule
 
 	container := k8s.ContainersToMap(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers)[CronJobContainerName]
-	container.Image = KidlectlImage
+	container.Image = r.KidlectlImage
 	container.Args = []string{
 		cjValues.command,
 		cjValues.instanceName,
