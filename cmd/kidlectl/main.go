@@ -17,7 +17,7 @@ type options struct {
 	IdleCmd      idleCommandOptions      `command:"idle" alias:"i" description:"idle the referenced object of an IdlingResource"`
 	WakeUpCmd    wakeupCommandOptions    `command:"wakeup" alias:"w" description:"wakeup the referenced object of an IdlingResource"`
 	VersionCmd   versionCommandOptions   `command:"version" description:"show the kidle version information"`
-	DiscoveryCmd discoveryCommandOptions `command:"discovery" description:"show the kidle version information"`
+	DiscoveryCmd discoveryCommandOptions `command:"discovery" description:"proof of concept for discovery"`
 }
 
 // idleCommandOptions are the options of the idle command
