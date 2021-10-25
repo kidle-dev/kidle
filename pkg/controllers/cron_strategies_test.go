@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"context"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	kidlev1beta1 "github.com/kidle-dev/kidle/pkg/api/v1beta1"
 	"github.com/kidle-dev/kidle/pkg/utils/k8s"
 	"github.com/kidle-dev/kidle/pkg/utils/pointer"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -228,7 +228,7 @@ var _ = Describe("cronjob strategy", func() {
 		containers := k8s.ContainersToMap(cj.Spec.JobTemplate.Spec.Template.Spec.Containers)
 		Expect(containers).To(HaveKey(CronJobContainerName))
 		c := containers[CronJobContainerName]
-		Expect(c.Image).To(Equal(KidlectlImage))
+		Expect(c.Image).To(Equal(DefaultKidlectlImage))
 		Expect(c.Args).To(HaveLen(2))
 		Expect(c.Args).To(ContainElements(command, irKey.Name))
 

@@ -22,7 +22,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 manifests: controller-gen  ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="../../pkg/api/..." output:crd:artifacts:config=../../config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="../../..." output:crd:artifacts:config=../../config/crd/bases output:rbac:artifacts:config=../../config/rbac
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="../../hack/boilerplate.go.txt" paths="./..."
@@ -30,7 +30,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 
 ##@ Build
 run: generate fmt vet manifests ## Run against the configured Kubernetes cluster in ~/.kube/config
-	go run ./main.go --health-probe-bind-address=:8081 --metrics-bind-address=127.0.0.1:8080
+	go run ./main.go --health-probe-bind-address=:8081 --metrics-bind-address=127.0.0.1:8080 --kidlectl-image=${IMG_OPERATOR}:${TAG}
 
 build: generate ## Build manager binary.
 	$(GO_BUILD_RECIPE) -o bin/operator main.go
@@ -47,12 +47,12 @@ docker-build: build ## Build the docker image.
 		--build-arg BUILD_DATE=${BUILD_DATE} \
 		--build-arg BUILD_BRANCH=${BUILD_BRANCH} \
 		--build-arg VERSION=${VERSION} \
-		-t ${IMG_OPERATOR}:${TAG}-${GOARCH} \
+		-t ${IMG_OPERATOR}:${TAG}${TAG_SUFFIX} \
 		-f cmd/operator/Dockerfile \
 		.
 
 docker-push: ## Push the docker image.
-	docker push ${IMG_OPERATOR}:${TAG}-${GOARCH}
+	docker push ${IMG_OPERATOR}:${TAG}${TAG_SUFFIX}
 
 build-multi-arch-image: ## Multi arch docker image build.
 	IMAGE=${IMG_OPERATOR} TAG=${TAG} ../../hack/push-docker-image.sh

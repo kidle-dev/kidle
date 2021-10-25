@@ -9,3 +9,4 @@ webhook:
 leaderElection:
   leaderElect: true
   resourceName: d2ebac05.kidle.dev
+kidlectlImage: kidledev/kidlectl:main

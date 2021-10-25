@@ -40,6 +40,10 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
+const (
+	DefaultKidlectlImage = "kidledev/kidlectl:main"
+)
+
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
@@ -78,6 +82,7 @@ var _ = BeforeSuite(func() {
 		Scheme:        k8sManager.GetScheme(),
 		Log:           ctrl.Log.WithName("controllers").WithName("IdlingResource"),
 		EventRecorder: k8sManager.GetEventRecorderFor("secretscope-controller"),
+		KidlectlImage: DefaultKidlectlImage,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

@@ -19,7 +19,7 @@ CPU_ARCHS="amd64 arm64 arm"
 
 # Build images
 for arch in ${CPU_ARCHS}; do
-	make WHAT=$WHAT docker GOARCH="$arch"
+	TAG_SUFFIX="-$arch" make WHAT=$WHAT docker GOARCH="$arch"
 done
 
 # Compose multi-arch images and push them to remote registry
