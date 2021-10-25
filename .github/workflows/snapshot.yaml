@@ -56,13 +56,19 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
+    - name: Retrieve Docker Image Tags
+      uses: jupyterhub/action-major-minor-tag-calculator@v1
+      id: dockertags
+      with:
+        githubToken: ${{ secrets.GITHUB_TOKEN }}
+
     - name: "fmt & vet"
       run: |
         make WHAT=operator fmt vet
 
     - name: "Build and Push multi arch Operator Image"
       run: |
-        TAG=${{env.GITHUB_REF_SLUG}} make WHAT=operator build-multi-arch-image
+        TAG=${{env.GITHUB_REF_SLUG}} TAGS=${{ join(fromJson(steps.dockertags.outputs.tags)) }} make WHAT=operator build-multi-arch-image
 
   build-kidlectl:
     runs-on: ubuntu-latest

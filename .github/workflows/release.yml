@@ -133,6 +133,23 @@ jobs:
       - name: Generate Checksums
         run: for file in kidle-*/kidle-*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        if: ${{ !env.ACT }}
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Retrieve Docker Image Tags
+        uses: jupyterhub/action-major-minor-tag-calculator@v1
+        id: dockertags
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Multi-arch Docker Image
+        run: |
+          TAG=${{env.GITHUB_REF_SLUG}} TAGS=${{ join(fromJson(steps.dockertags.outputs.tags)) }} make WHAT=operator build-multi-arch-image
+
       - name: Publish Release
         uses: softprops/action-gh-release@v1
         with:

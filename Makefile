@@ -21,6 +21,7 @@ lint: golangci-lint ## Run golangci-lint globally
 
 changelog: git-chglog ## Generate local changelog
 	$(GIT_CHGLOG) -c .github/chglog/release.yml $(git describe --tags) > RELEASE.md
+	printf "\n## Docker Image\n```\ndocker pull kidledev/kidle-operator:%s\n```\n" "$(git describe --tags)" >> RELEASE.md
 
 ##@ Build
 run: ## Run the $WHAT target
