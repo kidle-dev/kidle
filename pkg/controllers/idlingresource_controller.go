@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	kidlev1beta1 "github.com/kidle-dev/kidle/pkg/api/v1beta1"
 	"github.com/kidle-dev/kidle/pkg/controllers/idler"
+	"github.com/kidle-dev/kidle/pkg/metrics"
 	"github.com/kidle-dev/kidle/pkg/utils/array"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -155,11 +156,18 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 		return ctrl.Result{}, fmt.Errorf("error during adding annotation: %v", err)
 	}
 
+	labels := metrics.Labels{
+		Kind:           instance.Spec.IdlingResourceRef.Kind,
+		Name:           instance.Spec.IdlingResourceRef.Name,
+		Idlingresource: instance.Name,
+		Namespace:      instance.Namespace,
+	}
+
 	// Deal with the idling resource deletion
 	if instance.IsBeingDeleted() {
 
 		// Wakeup object
-		replicas, err := idler.Wakeup(ctx)
+		result, err := idler.Wakeup(ctx)
 		if err != nil {
 			r.Event(instance,
 				corev1.EventTypeWarning,
@@ -167,18 +175,11 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 				fmt.Sprintf("Failed to restore %s %s: %s", ref.Kind, ref.Name, err))
 			return ctrl.Result{}, fmt.Errorf("error during restoring: %v", err)
 		}
-		// TODO ugly hack, needs to find better way to handle CronJob Suspend field
-		if replicas != nil {
-			r.Event(instance,
-				corev1.EventTypeNormal,
-				fmt.Sprintf("Scaling%s", ref.Kind),
-				fmt.Sprintf("Scaled to %d", *replicas))
-		} else {
-			r.Event(instance,
-				corev1.EventTypeNormal,
-				fmt.Sprintf("Scaling%s", ref.Kind),
-				"WakedUp")
-		}
+		r.Event(instance,
+			corev1.EventTypeNormal,
+			fmt.Sprintf("Scaling%s", ref.Kind),
+			result.ToEvent())
+		metrics.WakeupCount.With(labels.ToPrometheusLabels()).Inc()
 
 		// Remove object annotations
 		if err := idler.RemoveAnnotations(ctx); err != nil {
@@ -210,7 +211,7 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 
 	// Wakeup object
 	if idler.NeedWakeup(instance) {
-		replicas, err := idler.Wakeup(ctx)
+		result, err := idler.Wakeup(ctx)
 		if err != nil {
 			r.Event(instance,
 				corev1.EventTypeWarning,
@@ -218,18 +219,11 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 				fmt.Sprintf("Failed to wake up %s %s: %s", ref.Kind, ref.Name, err))
 			return ctrl.Result{}, fmt.Errorf("error during waking up: %v", err)
 		}
-		// TODO ugly hack, needs to find better way to handle CronJob Suspend field
-		if replicas != nil {
-			r.Event(instance,
-				corev1.EventTypeNormal,
-				fmt.Sprintf("Scaling%s", ref.Kind),
-				fmt.Sprintf("Scaled to %d", *replicas))
-		} else {
-			r.Event(instance,
-				corev1.EventTypeNormal,
-				fmt.Sprintf("Scaling%s", ref.Kind),
-				"WakedUp")
-		}
+		r.Event(instance,
+			corev1.EventTypeNormal,
+			fmt.Sprintf("Scaling%s", ref.Kind),
+			result.ToEvent())
+		metrics.WakeupCount.With(labels.ToPrometheusLabels()).Inc()
 		return ctrl.Result{}, nil
 	}
 
@@ -246,6 +240,7 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 			corev1.EventTypeNormal,
 			fmt.Sprintf("Scaling%s", ref.Kind),
 			"Scaled to 0")
+		metrics.IdleCount.With(labels.ToPrometheusLabels()).Inc()
 		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil

@@ -58,7 +58,7 @@ func (i *CronJobIdler) Idle(ctx context.Context) error {
 	return nil
 }
 
-func (i *CronJobIdler) Wakeup(ctx context.Context) (*int32, error) {
+func (i *CronJobIdler) Wakeup(ctx context.Context) (*WakeupResult, error) {
 	if *i.CronJob.Spec.Suspend {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := i.Get(ctx, types.NamespacedName{Namespace: i.CronJob.Namespace, Name: i.CronJob.Name}, i.CronJob); err != nil {
@@ -77,5 +77,5 @@ func (i *CronJobIdler) Wakeup(ctx context.Context) (*int32, error) {
 	} else {
 		i.Log.V(2).Info("cronjob already waked up", "name", i.CronJob.Name)
 	}
-	return nil, nil
+	return &WakeupResult{nil}, nil
 }

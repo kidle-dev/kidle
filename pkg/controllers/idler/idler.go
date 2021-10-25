@@ -20,7 +20,18 @@ type Idler interface {
 	NeedWakeup(instance *kidlev1beta1.IdlingResource) bool
 
 	Idle(ctx context.Context) error
-	Wakeup(ctx context.Context) (*int32, error)
+	Wakeup(ctx context.Context) (*WakeupResult, error)
+}
+
+type WakeupResult struct {
+	Replicas *int32
+}
+
+func (w *WakeupResult) ToEvent() string {
+	if w.Replicas != nil {
+		return fmt.Sprintf("Scaled to %d", *w.Replicas)
+	}
+	return "WakedUp"
 }
 
 type ObjectIdler struct {
