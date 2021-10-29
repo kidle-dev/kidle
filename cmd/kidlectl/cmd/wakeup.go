@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"os"
@@ -9,8 +9,16 @@ import (
 	"github.com/kidle-dev/kidle/cmd/kidlectl/pkg"
 )
 
-// cmdWakeup executes the kidlectl wakeup command with given args
-func cmdWakeup(opts wakeupCommandOptions) {
+// WakeupCommandOptions are the options of the wakeup command
+type WakeupCommandOptions struct {
+	Args struct {
+		Name string `long:"name" env:"NAME" description:"idling resource name to wakeup"`
+	} `positional-args:"yes" required:"1"`
+	Namespace string `long:"namespace" env:"NAMESPACE" short:"n" description:"IdlingResource namespace"`
+}
+
+// Wakeup executes the kidlectl wakeup command with given args
+func Wakeup(opts WakeupCommandOptions) {
 	kidle, err := pkg.NewKidleClient(opts.Namespace)
 	if err != nil {
 		logf.Log.Error(err, "unable to create kidle client")

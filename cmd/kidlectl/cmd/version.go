@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"encoding/json"
@@ -7,8 +7,12 @@ import (
 	"github.com/kidle-dev/kidle/pkg/version"
 )
 
-// cmdVersion executes the kidlectl version command
-func cmdVersion() {
+// VersionCommandOptions are the options of the version command
+type VersionCommandOptions struct {
+}
+
+// Version executes the kidlectl version command
+func Version() {
 	b, err := json.Marshal(version.GetVersionInfos())
 	if err != nil {
 		fmt.Println(version.Version)

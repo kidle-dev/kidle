@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"os"
@@ -9,8 +9,18 @@ import (
 	"github.com/kidle-dev/kidle/cmd/kidlectl/pkg"
 )
 
-// cmdCreate executes the kidlectl create command with given args
-func cmdCreate(opts createCommandOptions) {
+// CreateCommandOptions are the options of the create command
+type CreateCommandOptions struct {
+	Args struct {
+		Name string `long:"name" env:"NAME" description:"idling resource name to wakeup"`
+	} `positional-args:"yes" required:"1"`
+	Namespace string `long:"namespace" env:"NAMESPACE" short:"n" description:"IdlingResource namespace"`
+	Idle      bool   `long:"idle" env:"IDLE" short:"i" description:"the desired state of idling, defaults to false"`
+	Ref       string `long:"ref" env:"IDLE" short:"r" description:"the reference to the idle-able workload"`
+}
+
+// Create executes the kidlectl create command with given args
+func Create(opts CreateCommandOptions) {
 	// create a new kidle client
 	kidle, err := pkg.NewKidleClient(opts.Namespace)
 	if err != nil {
