@@ -74,8 +74,10 @@ Help Options:
   -h, --help        Show this help message
 
 Available commands:
-  idle    idle the referenced object of an IdlingResource (aliases: i)
-  wakeup  wakeup the referenced object of an IdlingResource (aliases: w)
+  create     create an IdlingResource (aliases: c)
+  idle       idle the referenced object of an IdlingResource (aliases: i)
+  version    show the kidle version information
+  wakeup     wakeup the referenced object of an IdlingResource (aliases: w)
 ```
 
 ## Quickstart
@@ -85,7 +87,9 @@ First, create a Deployment:
 $ kubectl create deploy --replicas=2 --image=stefanprodan/podinfo podinfo
 ```
 
-Then, create an `IdlingResource` object. Here is the most basic form which enables **manual idling of a Deployment**:
+To create an `IdlingResource` object; you can either:
+
+1. Use the most basic form which enables **manual idling of a Deployment**:
 
 ```yaml
 apiVersion: kidle.kidle.dev/v1beta1
@@ -103,7 +107,13 @@ spec:
   idle: false
 ```
 
-- This create an `IdlingResource` object that references the Deployment named podinfo.
+2. Create an idling resource by using the `create` command:
+
+```bash
+kidlectl create podinfo --kubeconfig=~/.kube/config -n default -r deployment/podinfo
+```
+
+- This creates an `IdlingResource` object that references the Deployment named podinfo.
 - The initial idle status is `false`.
 
 At this point, the Deployment still have 2 replicas:

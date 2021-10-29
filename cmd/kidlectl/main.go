@@ -1,49 +1,28 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/jessevdk/go-flags"
-	"github.com/kidle-dev/kidle/pkg/version"
-	"k8s.io/apimachinery/pkg/types"
+	"github.com/kidle-dev/kidle/cmd/kidlectl/cmd"
 	"os"
+
+	"github.com/jessevdk/go-flags"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-// options are the cli main options for go-flags
-type options struct {
-	Kubeconfig string                `long:"kubeconfig" env:"KUBECONFIG" description:"path to Kubernetes config file"`
-	IdleCmd    idleCommandOptions    `command:"idle" alias:"i" description:"idle the referenced object of an IdlingResource"`
-	WakeUpCmd  wakeupCommandOptions  `command:"wakeup" alias:"w" description:"wakeup the referenced object of an IdlingResource"`
-	VersionCmd versionCommandOptions `command:"version" description:"show the kidle version information"`
-}
-
-// idleCommandOptions are the options of the idle command
-type idleCommandOptions struct {
-	Args struct {
-		Name string `long:"name" env:"NAME" description:"idling resource name to idle"`
-	} `positional-args:"yes" required:"1"`
-	Namespace string `long:"namespace" env:"NAMESPACE" short:"n" description:"IdlingResource namespace"`
-}
-
-// wakeupCommandOptions are the options of the wakeup command
-type wakeupCommandOptions struct {
-	Args struct {
-		Name string `long:"name" env:"NAME" description:"idling resource name to wakeup"`
-	} `positional-args:"yes" required:"1"`
-	Namespace string `long:"namespace" env:"NAMESPACE" short:"n" description:"IdlingResource namespace"`
-}
-
-// versionCommandOptions are the options of the version command
-type versionCommandOptions struct {
+// Options are the cli main options for go-flags
+type Options struct {
+	Kubeconfig string                    `long:"kubeconfig" env:"KUBECONFIG" description:"path to Kubernetes config file"`
+	IdleCmd    cmd.IdleCommandOptions    `command:"idle" alias:"i" description:"idle the referenced object of an IdlingResource"`
+	WakeUpCmd  cmd.WakeupCommandOptions  `command:"wakeup" alias:"w" description:"wakeup the referenced object of an IdlingResource"`
+	CreateCmd  cmd.CreateCommandOptions  `command:"create" alias:"c" description:"create an IdlingResource"`
+	VersionCmd cmd.VersionCommandOptions `command:"version" description:"show the kidle version information"`
 }
 
 func main() {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	// parse flags
-	opts := &options{}
+	opts := &Options{}
 	p := flags.NewParser(opts, flags.Default)
 	_, err := p.Parse()
 
@@ -59,57 +38,12 @@ func main() {
 	// execute active command
 	switch p.Active.Name {
 	case "idle":
-		kidle, err := NewKidleClient(opts.IdleCmd.Namespace)
-		if err != nil {
-			logf.Log.Error(err, "unable to create kidle client")
-			os.Exit(2)
-		}
-		logf.Log.V(0).Info("idling", "namespace", kidle.Namespace, "name", opts.IdleCmd.Args.Name)
-
-		done, err := kidle.applyDesiredIdleState(true, &types.NamespacedName{
-			Namespace: kidle.Namespace,
-			Name:      opts.IdleCmd.Args.Name,
-		})
-		if err != nil {
-			logf.Log.Error(err, "unable to idle")
-			os.Exit(3)
-		}
-
-		if done {
-			logf.Log.V(0).Info("scaled to 0", "namespace", kidle.Namespace, "name", opts.IdleCmd.Args.Name)
-		} else {
-			logf.Log.V(0).Info("already idled", "namespace", kidle.Namespace, "name", opts.IdleCmd.Args.Name)
-		}
-
+		cmd.Idle(opts.IdleCmd)
 	case "wakeup":
-		kidle, err := NewKidleClient(opts.WakeUpCmd.Namespace)
-		if err != nil {
-			logf.Log.Error(err, "unable to create kidle client")
-			os.Exit(2)
-		}
-		logf.Log.V(0).Info("waking up", "namespace", kidle.Namespace, "name", opts.WakeUpCmd.Args.Name)
-
-		done, err := kidle.applyDesiredIdleState(false, &types.NamespacedName{
-			Namespace: kidle.Namespace,
-			Name:      opts.WakeUpCmd.Args.Name,
-		})
-		if err != nil {
-			logf.Log.Error(err, "unable to wake up")
-			os.Exit(3)
-		}
-
-		if done {
-			logf.Log.V(0).Info("waked up", "namespace", kidle.Namespace, "name", opts.WakeUpCmd.Args.Name)
-		} else {
-			logf.Log.V(0).Info("already waked up", "namespace", kidle.Namespace, "name", opts.WakeUpCmd.Args.Name)
-		}
-
+		cmd.Wakeup(opts.WakeUpCmd)
+	case "create":
+		cmd.Create(opts.CreateCmd)
 	case "version":
-		b, err := json.Marshal(version.GetVersionInfos())
-		if err != nil {
-			fmt.Println(version.Version)
-			return
-		}
-		fmt.Println(string(b))
+		cmd.Version()
 	}
 }
