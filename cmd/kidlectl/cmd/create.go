@@ -16,7 +16,7 @@ type CreateCommandOptions struct {
 	} `positional-args:"yes" required:"1"`
 	Namespace string `long:"namespace" env:"NAMESPACE" short:"n" description:"IdlingResource namespace"`
 	Idle      bool   `long:"idle" env:"IDLE" short:"i" description:"the desired state of idling, defaults to false"`
-	Ref       string `long:"ref" env:"IDLE" short:"r" description:"the reference to the idle-able workload"`
+	Ref       string `long:"ref" env:"REF" short:"r" description:"the reference to the idle-able workload"`
 }
 
 // Create executes the kidlectl create command with given args
