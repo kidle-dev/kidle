@@ -1,6 +1,9 @@
 # kidle
 
-[![snapshot](https://github.com/kidle-dev/kidle/actions/workflows/snapshot.yaml/badge.svg)](https://github.com/kidle-dev/kidle/actions/workflows/snapshot.yaml)
+[![Build Status](https://github.com/kidle-dev/kidle/actions/workflows/snapshot.yaml/badge.svg?style=flat-square)](https://github.com/kidle-dev/kidle/actions/workflows/snapshot.yaml)
+[![License](https://img.shields.io/github/license/kidle-dev/kidle?style=flat-square)](./LICENSE)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg?style=flat-square)](CODE_OF_CONDUCT.md)
+
 
 Kidle is a kubernetes idling feature to automatically idle or wakeup workloads.
 
