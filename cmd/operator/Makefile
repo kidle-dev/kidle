@@ -39,7 +39,7 @@ d: docker ## -> docker.
 docker: docker-build docker-push ## Build and push the docker image.
 
 docker-build: build ## Build the docker image.
-	cd ../../; docker build --no-cache \
+	cd ../../; docker build \
 		--build-arg ARCH=${FROM_ARCH} \
 		--build-arg OS=${GOOS} \
 		--build-arg BUILD_REVISION=${BUILD_REVISION} \

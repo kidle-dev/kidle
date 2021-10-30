@@ -60,7 +60,7 @@ func (i *StatefulSetIdler) Idle(ctx context.Context) error {
 	return nil
 }
 
-func (i *StatefulSetIdler) Wakeup(ctx context.Context) (*int32, error) {
+func (i *StatefulSetIdler) Wakeup(ctx context.Context) (*WakeupResult, error) {
 	previousReplicas := pointer.Int32(1)
 
 	if metadataPreviousReplicas, found := k8s.GetAnnotation(&i.StatefulSet.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas); found {
@@ -89,5 +89,5 @@ func (i *StatefulSetIdler) Wakeup(ctx context.Context) (*int32, error) {
 	} else {
 		i.Log.V(2).Info("statefulset already waked up", "name", i.StatefulSet.Name)
 	}
-	return previousReplicas, nil
+	return &WakeupResult{previousReplicas}, nil
 }

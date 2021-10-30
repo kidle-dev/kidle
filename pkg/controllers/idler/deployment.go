@@ -60,7 +60,7 @@ func (i *DeploymentIdler) Idle(ctx context.Context) error {
 	return nil
 }
 
-func (i *DeploymentIdler) Wakeup(ctx context.Context) (*int32, error) {
+func (i *DeploymentIdler) Wakeup(ctx context.Context) (*WakeupResult, error) {
 	previousReplicas := pointer.Int32(1)
 
 	if metadataPreviousReplicas, found := k8s.GetAnnotation(&i.Deployment.ObjectMeta, kidlev1beta1.MetadataPreviousReplicas); found {
@@ -89,5 +89,5 @@ func (i *DeploymentIdler) Wakeup(ctx context.Context) (*int32, error) {
 	} else {
 		i.Log.V(2).Info("deployment already waked up", "name", i.Deployment.Name)
 	}
-	return previousReplicas, nil
+	return &WakeupResult{previousReplicas}, nil
 }

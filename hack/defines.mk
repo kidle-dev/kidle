@@ -16,7 +16,7 @@ IMG_KIDLECTL ?= kidledev/kidlectl
 PROJECT_DIR := $(shell dirname $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST)))))
 BIN_DIR := $(PROJECT_DIR)/bin
 ENVTEST_ASSETS_DIR=$(BIN_DIR)/test
-TAG?=$(shell git rev-parse --short HEAD)
+TAG?=latest
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 define go-get-tool
