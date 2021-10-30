@@ -159,7 +159,7 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 	labels := metrics.Labels{
 		Kind:           instance.Spec.IdlingResourceRef.Kind,
 		Name:           instance.Spec.IdlingResourceRef.Name,
-		Idlingresource: instance.Name,
+		IdlingResource: instance.Name,
 		Namespace:      instance.Namespace,
 	}
 
@@ -180,6 +180,7 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 			fmt.Sprintf("Scaling%s", ref.Kind),
 			result.ToEvent())
 		metrics.WakeupCount.With(labels.ToPrometheusLabels()).Inc()
+		metrics.WakeupGauge.With(labels.ToPrometheusLabels()).Inc()
 
 		// Remove object annotations
 		if err := idler.RemoveAnnotations(ctx); err != nil {
@@ -224,6 +225,7 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 			fmt.Sprintf("Scaling%s", ref.Kind),
 			result.ToEvent())
 		metrics.WakeupCount.With(labels.ToPrometheusLabels()).Inc()
+		metrics.WakeupGauge.With(labels.ToPrometheusLabels()).Inc()
 		return ctrl.Result{}, nil
 	}
 
@@ -241,6 +243,7 @@ func (r *IdlingResourceReconciler) ReconcileWithIdler(ctx context.Context, insta
 			fmt.Sprintf("Scaling%s", ref.Kind),
 			"Scaled to 0")
 		metrics.IdleCount.With(labels.ToPrometheusLabels()).Inc()
+		metrics.IdleGauge.With(labels.ToPrometheusLabels()).Inc()
 		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil

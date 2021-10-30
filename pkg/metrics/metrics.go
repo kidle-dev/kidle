@@ -8,16 +8,24 @@ import (
 type Labels struct {
 	Kind           string
 	Name           string
-	Idlingresource string
+	IdlingResource string
 	Namespace      string
 }
 
+var (
+	kindLabel           = "kind"
+	nameLabel           = "name"
+	idlingResourceLabel = "idlingresource"
+	namespaceLabel      = "namespace"
+	labelNames          = []string{kindLabel, nameLabel, idlingResourceLabel, namespaceLabel}
+)
+
 func (l *Labels) ToPrometheusLabels() prometheus.Labels {
 	return prometheus.Labels{
-		"kind":           l.Kind,
-		"name":           l.Name,
-		"idlingresource": l.Idlingresource,
-		"namespace":      l.Namespace,
+		kindLabel:           l.Kind,
+		nameLabel:           l.Name,
+		idlingResourceLabel: l.IdlingResource,
+		namespaceLabel:      l.Namespace,
 	}
 }
 
@@ -27,28 +35,32 @@ var (
 			Name: "kidle_idle_phase_total",
 			Help: "Number of idle phase",
 		},
-		[]string{
-			"kind",
-			"name",
-			"idlingresource",
-			"namespace",
+		labelNames,
+	)
+	IdleGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "kidle_idle_phase_gauge",
+			Help: "Number of idle phase",
 		},
+		labelNames,
 	)
 	WakeupCount = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "kidle_wakeup_phase_total",
 			Help: "Number of wakeup phase",
 		},
-		[]string{
-			"kind",
-			"name",
-			"idlingresource",
-			"namespace",
+		labelNames,
+	)
+	WakeupGauge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "kidle_wakeup_phase_gauge",
+			Help: "Number of wakeup phase",
 		},
+		labelNames,
 	)
 )
 
 func init() {
 	// Register custom metrics with the global prometheus registry
-	metrics.Registry.MustRegister(IdleCount, WakeupCount)
+	metrics.Registry.MustRegister(IdleCount, WakeupCount, IdleGauge, WakeupGauge)
 }
