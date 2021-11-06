@@ -341,9 +341,8 @@ func (rl *KidleChangedPredicate) Update(e event.UpdateEvent) bool {
 		expected, found := newDeploy.GetAnnotations()[kidlev1beta1.MetadataExpectedState]
 		if found && strconv.Itoa(int(*newDeploy.Spec.Replicas)) != expected {
 			return true
-		} else {
-			return false
 		}
+		return false
 	}
 
 	oldSts, ok1 := e.ObjectOld.(*appsv1.StatefulSet)
@@ -356,9 +355,8 @@ func (rl *KidleChangedPredicate) Update(e event.UpdateEvent) bool {
 		expected, found := newSts.GetAnnotations()[kidlev1beta1.MetadataExpectedState]
 		if found && strconv.Itoa(int(*newSts.Spec.Replicas)) != expected {
 			return true
-		} else {
-			return false
 		}
+		return false
 	}
 
 	oldCj, ok1 := e.ObjectOld.(*batchv1beta1.CronJob)
@@ -371,9 +369,8 @@ func (rl *KidleChangedPredicate) Update(e event.UpdateEvent) bool {
 		expected, found := newCj.GetAnnotations()[kidlev1beta1.MetadataExpectedState]
 		if found && strconv.FormatBool(*newCj.Spec.Suspend) != expected {
 			return true
-		} else {
-			return false
 		}
+		return false
 	}
 	return true
 }

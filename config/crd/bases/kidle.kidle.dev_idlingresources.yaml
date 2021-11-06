@@ -68,8 +68,10 @@ spec:
                 - name
                 type: object
               idlingStrategy:
+                description: The idling strategy to use to idle the workload.
                 properties:
                   cronStrategy:
+                    description: Idle the workload by using a cronjob expression
                     properties:
                       schedule:
                         description: The schedule in Cron format, see https://en.wikipedia.org/wiki/Cron.
@@ -78,11 +80,14 @@ spec:
                     - schedule
                     type: object
                   inactiveStrategy:
+                    description: NOT IMPLEMENTED
                     type: object
                 type: object
               wakeupStrategy:
+                description: The wakeup strategy to use to wakeup the workload.
                 properties:
                   cronStrategy:
+                    description: Wakeup the workload by using a cronjob expression
                     properties:
                       schedule:
                         description: The schedule in Cron format, see https://en.wikipedia.org/wiki/Cron.
@@ -91,6 +96,7 @@ spec:
                     - schedule
                     type: object
                   onCallStrategy:
+                    description: NOT IMPLEMENTED
                     type: object
                 type: object
             required:

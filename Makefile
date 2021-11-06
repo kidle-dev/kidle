@@ -19,6 +19,9 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 lint: golangci-lint ## Run golangci-lint globally
 	$(GOLANGCI_LINT) run
 
+revive: revive-install ## Run revive globally
+	$(REVIVE) ./...
+
 changelog: git-chglog ## Generate local changelog
 	$(GIT_CHGLOG) -c .github/chglog/release.yml $(git describe --tags) > RELEASE.md
 	printf "\n## Docker Image\n```\ndocker pull kidledev/kidle-operator:%s\n```\n" "$(git describe --tags)" >> RELEASE.md

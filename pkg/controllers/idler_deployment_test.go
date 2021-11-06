@@ -158,7 +158,7 @@ var _ = Describe("idling/wakeup Deployments", func() {
 		It("Should wakeup the Deployment", func() {
 			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
-			// We'll need to wait until the controller has waked up the Deployment
+			// We'll need to wait until the controller has woke up the Deployment
 			Eventually(func() (*int32, error) {
 				d := &appsv1.Deployment{}
 				err := k8sClient.Get(ctx, deployKey, d)
@@ -205,7 +205,7 @@ var _ = Describe("idling/wakeup Deployments", func() {
 
 			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
-			// We'll need to wait until the controller has waked up the Deployment
+			// We'll need to wait until the controller has woke up the Deployment
 			By("waking up")
 			Eventually(func() (*int32, error) {
 				d := &appsv1.Deployment{}

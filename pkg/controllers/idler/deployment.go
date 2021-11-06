@@ -85,9 +85,9 @@ func (i *DeploymentIdler) Wakeup(ctx context.Context) (*int32, error) {
 			i.Log.Error(err, "unable to wakeup deployment", "name", i.Deployment.Name)
 			return nil, err
 		}
-		i.Log.V(1).Info("deployment waked up", "name", i.Deployment.Name)
+		i.Log.V(1).Info("deployment woke up", "name", i.Deployment.Name)
 	} else {
-		i.Log.V(2).Info("deployment already waked up", "name", i.Deployment.Name)
+		i.Log.V(2).Info("deployment already woke up", "name", i.Deployment.Name)
 	}
 	return previousReplicas, nil
 }

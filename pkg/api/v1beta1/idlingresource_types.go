@@ -20,18 +20,16 @@ import (
 )
 
 const (
-	IdlingResources = "idlingresources"
-
 	// IdlingResourceFinalizerName is the name of the idlingresource finalizer
 	IdlingResourceFinalizerName = "idlingresource.finalizers.kidle.kidle.dev"
 
-	// TODO
+	// MetadataIdlingResourceReference is an annotation on the observed workload that reference the idlingResources that it belongs to
 	MetadataIdlingResourceReference = "kidle.kidle.dev/idling-resource-reference"
 
-	// TODO
+	// MetadataPreviousReplicas is an annotation on the observed workload that backup the previous replicas count before the idling phase
 	MetadataPreviousReplicas = "kidle.kidle.dev/previous-replicas"
 
-	// TODO
+	// MetadataExpectedState is an annotation on the observed workload that contains the expected idling state
 	MetadataExpectedState = "kidle.kidle.dev/expected-state"
 )
 
@@ -47,9 +45,11 @@ type IdlingResourceSpec struct {
 	// +kubebuilder:default:false
 	Idle bool `json:"idle"`
 
+	// The idling strategy to use to idle the workload.
 	// +optional
 	IdlingStrategy *IdlingStrategy `json:"idlingStrategy,omitempty"`
 
+	// The wakeup strategy to use to wakeup the workload.
 	// +optional
 	WakeupStrategy *WakeupStrategy `json:"wakeupStrategy,omitempty"`
 }
@@ -67,10 +67,13 @@ type CrossVersionObjectReference struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 }
 
+// IdlingStrategy holds the possible idling strategies
 type IdlingStrategy struct {
+	// Idle the workload by using a cronjob expression
 	// +optional
 	CronStrategy *CronStrategy `json:"cronStrategy,omitempty"`
 
+	// NOT IMPLEMENTED
 	// +optional
 	InactiveStrategy *InactiveStrategy `json:"inactiveStrategy,omitempty"`
 }
@@ -83,10 +86,13 @@ type CronStrategy struct {
 type InactiveStrategy struct {
 }
 
+// WakeupStrategy holds the possible wakeup strategies
 type WakeupStrategy struct {
+	// Wakeup the workload by using a cronjob expression
 	// +optional
 	CronStrategy *CronStrategy `json:"cronStrategy,omitempty"`
 
+	// NOT IMPLEMENTED
 	// +optional
 	OnCallStrategy *OnCallStrategy `json:"onCallStrategy,omitempty"`
 }

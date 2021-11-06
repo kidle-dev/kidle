@@ -159,7 +159,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 		It("Should wakeup the StatefulSet", func() {
 			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
-			// We'll need to wait until the controller has waked up the StatefulSet
+			// We'll need to wait until the controller has woke up the StatefulSet
 			Eventually(func() (*int32, error) {
 				sts := &appsv1.StatefulSet{}
 				err := k8sClient.Get(ctx, stsKey, sts)
@@ -206,7 +206,7 @@ var _ = Describe("idling/wakeup StatefulSets", func() {
 
 			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
-			// We'll need to wait until the controller has waked up the StatefulSet
+			// We'll need to wait until the controller has woke up the StatefulSet
 			By("waking up")
 			Eventually(func() (*int32, error) {
 				sts := &appsv1.StatefulSet{}

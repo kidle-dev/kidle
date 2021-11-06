@@ -215,7 +215,7 @@ The cronjob is based on the `kidlectl` image and run a basic `kidlectl <idle|wak
 ```bash
 $ kubectl logs jobs/kidle-podinfo-wakeup-27202409                                                                                            
 2021-09-20T13:29:02.241Z	INFO	waking up	{"namespace": "kidle-demo", "name": "podinfo"}
-2021-09-20T13:29:02.265Z	INFO	waked up	{"namespace": "kidle-demo", "name": "podinfo"}
+2021-09-20T13:29:02.265Z	INFO	woke up	{"namespace": "kidle-demo", "name": "podinfo"}
 ```
 
 In order to make `kidlectl` work inside a pod, a dedicated service account, role and role binding are created per `IdlingResource`:
