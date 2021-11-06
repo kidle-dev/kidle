@@ -56,9 +56,8 @@ func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, 
 		if err := r.createOrUpdateCronJob(ctx, instance, cjIdleValues); err != nil {
 			r.Event(instance, corev1.EventTypeWarning, "Creating idle CronJob", fmt.Sprintf("Failed to create CronJob: %s", err))
 			return reconcile.Result{}, fmt.Errorf("error when creating idle CronJob: %v", err)
-		} else {
-			r.Event(instance, corev1.EventTypeNormal, "Creating idle CronJob", "Created")
 		}
+		r.Event(instance, corev1.EventTypeNormal, "Creating idle CronJob", "Created")
 	} else {
 		// Delete the idle cronjob if necessary
 		cronJob := &v1beta1.CronJob{}
@@ -66,9 +65,8 @@ func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, 
 			if err := r.Delete(ctx, cronJob, client.PropagationPolicy(metav1.DeletePropagationBackground)); client.IgnoreNotFound(err) != nil {
 				r.Event(instance, corev1.EventTypeWarning, "Deleting idle CronJob", fmt.Sprintf("Failed to delete CronJob: %s", err))
 				return reconcile.Result{}, fmt.Errorf("error when deleting idle CronJob: %v", err)
-			} else {
-				r.Event(instance, corev1.EventTypeNormal, "Deleting idle CronJob", "Deleted")
 			}
+			r.Event(instance, corev1.EventTypeNormal, "Deleting idle CronJob", "Deleted")
 		}
 	}
 
@@ -88,9 +86,8 @@ func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, 
 		if err := r.createOrUpdateCronJob(ctx, instance, cjValues); err != nil {
 			r.Event(instance, corev1.EventTypeWarning, "Creating wakeup CronJob", fmt.Sprintf("Failed to create CronJob: %s", err))
 			return reconcile.Result{}, fmt.Errorf("error when creating wakeup CronJob: %v", err)
-		} else {
-			r.Event(instance, corev1.EventTypeNormal, "Creating wakeup CronJob", "Created")
 		}
+		r.Event(instance, corev1.EventTypeNormal, "Creating wakeup CronJob", "Created")
 	} else {
 		// Delete the wakeup cronjob if necessary
 		cronJob := &v1beta1.CronJob{}
@@ -98,9 +95,8 @@ func (r *IdlingResourceReconciler) ReconcileCronStrategies(ctx context.Context, 
 			if err := r.Delete(ctx, cronJob, client.PropagationPolicy(metav1.DeletePropagationBackground)); client.IgnoreNotFound(err) != nil {
 				r.Event(instance, corev1.EventTypeWarning, "Deleting wakeup CronJob", fmt.Sprintf("Failed to delete CronJob: %s", err))
 				return reconcile.Result{}, fmt.Errorf("error when deleting wakeup CronJob: %v", err)
-			} else {
-				r.Event(instance, corev1.EventTypeNormal, "Deleting wakeup CronJob", "Deleted")
 			}
+			r.Event(instance, corev1.EventTypeNormal, "Deleting wakeup CronJob", "Deleted")
 		}
 	}
 
@@ -120,9 +116,8 @@ func (r *IdlingResourceReconciler) createOrUpdateCronJob(ctx context.Context, in
 				return fmt.Errorf("unable to create cronJob: %v", err)
 			}
 			return nil
-		} else {
-			return fmt.Errorf("unable to get cronJob: %v", err)
 		}
+		return fmt.Errorf("unable to get cronJob: %v", err)
 	}
 
 	if r.cronJobNeedChanges(cronJob, cjValues) {

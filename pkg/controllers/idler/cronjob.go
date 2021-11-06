@@ -73,9 +73,9 @@ func (i *CronJobIdler) Wakeup(ctx context.Context) (*int32, error) {
 			i.Log.Error(err, "unable to wakeup cronjob", "name", i.CronJob.Name)
 			return nil, err
 		}
-		i.Log.V(1).Info("cronjob waked up", "name", i.CronJob.Name)
+		i.Log.V(1).Info("cronjob woke up", "name", i.CronJob.Name)
 	} else {
-		i.Log.V(2).Info("cronjob already waked up", "name", i.CronJob.Name)
+		i.Log.V(2).Info("cronjob already woke up", "name", i.CronJob.Name)
 	}
 	return nil, nil
 }

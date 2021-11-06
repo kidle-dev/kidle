@@ -162,9 +162,9 @@ jobs:
       run: make WHAT=operator gtest
       shell: bash
 
-  golangci:
+  golangci-lint:
     runs-on: ubuntu-latest
-    name: lint
+    name: golangci-lint
     if: "!contains(github.event.head_commit.message, '[ci skip]')"
     steps:
       - uses: actions/checkout@v2
@@ -173,3 +173,12 @@ jobs:
         with:
           version: v1.42.1
           args: --timeout=5m0s
+
+  revive-lint:
+    runs-on: ubuntu-latest
+    name: revive-lint
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run Revive Action by building from repository
+        uses: morphy2k/revive-action@v2

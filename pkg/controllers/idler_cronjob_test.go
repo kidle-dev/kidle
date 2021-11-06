@@ -169,7 +169,7 @@ var _ = Describe("idling/wakeup Cronjobs", func() {
 		It("Should wakeup the CronJob", func() {
 			Expect(setIdleFlag(ctx, irKey, false)).Should(Succeed())
 
-			// We'll need to wait until the controller has waked up the CronJob
+			// We'll need to wait until the controller has woke up the CronJob
 			Eventually(func() (*bool, error) {
 				cj := &batchv1beta1.CronJob{}
 				err := k8sClient.Get(ctx, cronJobKey, cj)

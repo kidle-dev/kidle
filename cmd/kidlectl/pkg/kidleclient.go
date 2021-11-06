@@ -226,7 +226,7 @@ func (k *KidleClient) CreateIdlingResource(idle bool, ref string, req *client.Ob
 // print the allowed resources in alphabetical order
 func printAllowedResources(resources map[string]bool) string {
 	var keys []string
-	for k, _ := range resources {
+	for k := range resources {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)

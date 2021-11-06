@@ -85,9 +85,9 @@ func (i *StatefulSetIdler) Wakeup(ctx context.Context) (*int32, error) {
 			i.Log.Error(err, "unable to wakeup statefulset", "name", i.StatefulSet.Name)
 			return nil, err
 		}
-		i.Log.V(1).Info("statefulset waked up", "name", i.StatefulSet.Name)
+		i.Log.V(1).Info("statefulset woke up", "name", i.StatefulSet.Name)
 	} else {
-		i.Log.V(2).Info("statefulset already waked up", "name", i.StatefulSet.Name)
+		i.Log.V(2).Info("statefulset already woke up", "name", i.StatefulSet.Name)
 	}
 	return previousReplicas, nil
 }
